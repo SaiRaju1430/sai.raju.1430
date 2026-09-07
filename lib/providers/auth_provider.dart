@@ -123,7 +123,7 @@ class AuthProvider extends ChangeNotifier {
         return false; // Indicates registration details are required
       }
     } catch (e) {
-      _errorMessage = e.toString().replaceAll('Exception:', '').trim();
+      _errorMessage = _formatAuthError(e);
       _isLoading = false;
       notifyListeners();
       return false;
@@ -164,7 +164,7 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _errorMessage = e.toString().replaceAll('Exception:', '').trim();
+      _errorMessage = _formatAuthError(e);
       _isLoading = false;
       _tempGoogleUser = null;
       notifyListeners();
@@ -247,7 +247,7 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _errorMessage = e.toString().replaceAll('Exception:', '').trim();
+      _errorMessage = _formatAuthError(e);
       _isLoading = false;
       notifyListeners();
       return false;
@@ -282,5 +282,31 @@ class AuthProvider extends ChangeNotifier {
   void clearError() {
     _errorMessage = null;
     notifyListeners();
+  }
+
+  String _formatAuthError(dynamic e) {
+    final str = e.toString();
+    if (str.contains('people.googleapis.com') || str.contains('People API')) {
+      return 'Google People API is propagating in Google Cloud. Please try again in 1-2 minutes.';
+    }
+    if (str.contains('popup_closed_by_user') || str.contains('cancelled') || str.contains('canceled')) {
+      return 'Google sign-in was cancelled.';
+    }
+    if (str.contains('origin_mismatch') || str.contains('access_denied') || str.contains('PERMISSION_DENIED')) {
+      return 'Google sign-in permission denied. Please verify your connection or try again.';
+    }
+    if (str.contains('SocketException') || str.contains('network_error') || str.contains('Failed host lookup')) {
+      return 'Network connection error. Please check your internet connection.';
+    }
+    if (str.startsWith('Exception:')) {
+      return str.replaceFirst('Exception:', '').trim();
+    }
+    if (str.contains('"message":')) {
+      final match = RegExp(r'"message":\s*"([^"]+)"').firstMatch(str);
+      if (match != null && match.group(1) != null) {
+        return match.group(1)!;
+      }
+    }
+    return str.length > 100 ? '${str.substring(0, 97)}...' : str;
   }
 }

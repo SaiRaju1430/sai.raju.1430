@@ -63,7 +63,7 @@ class SupabaseService {
       final GoogleSignIn googleSignIn = GoogleSignIn(
         clientId: kIsWeb ? SupabaseOptions.webClientId : null,
         serverClientId: SupabaseOptions.webClientId,
-        scopes: ['email', 'profile'],
+        scopes: ['email', 'openid'],
       );
       
       // Clear previously cached Google account session so Google account picker always opens
@@ -94,6 +94,10 @@ class SupabaseService {
       return res.user;
     } catch (e) {
       debugPrint("CampusKart: Google Sign-In error: $e");
+      final str = e.toString();
+      if (str.contains('People API') || str.contains('people.googleapis.com')) {
+        throw Exception("Google People API was recently enabled. Google Cloud takes 2-5 minutes to propagate. Please try again shortly.");
+      }
       rethrow;
     }
   }
