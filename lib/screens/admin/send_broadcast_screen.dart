@@ -4,7 +4,7 @@ import '../../core/theme/app_theme.dart';
 import '../../providers/admin_provider.dart';
 import '../../providers/fast_food_provider.dart';
 import '../../core/services/whatsapp_service.dart';
-import '../../core/services/firebase_service.dart';
+import '../../core/services/supabase_service.dart';
 import '../../models/user_model.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_textfield.dart';
@@ -78,7 +78,7 @@ class _SendBroadcastScreenState extends State<SendBroadcastScreen> {
   Future<void> _loadUsers() async {
     setState(() => _loadingUsers = true);
     try {
-      final list = await FirebaseService().getAllUsers();
+      final list = await SupabaseService().getAllUsers();
       setState(() {
         _users = list.where((u) => u.role == 'customer').toList();
         if (_users.isNotEmpty) {
@@ -153,7 +153,7 @@ class _SendBroadcastScreenState extends State<SendBroadcastScreen> {
     try {
       if (widget.targetCustomerId != null) {
         // Individual customer message (target locked by route)
-        await FirebaseService().sendNotification(
+        await SupabaseService().sendNotification(
           title: title,
           message: content,
           targetUserId: widget.targetCustomerId!,
@@ -179,7 +179,7 @@ class _SendBroadcastScreenState extends State<SendBroadcastScreen> {
       } else {
         // Broadcast message to All Users or Specific User
         if (_targetType == 'all') {
-          await FirebaseService().sendNotification(
+          await SupabaseService().sendNotification(
             title: title,
             message: content,
             targetUserId: null,
@@ -198,7 +198,7 @@ class _SendBroadcastScreenState extends State<SendBroadcastScreen> {
           if (_selectedUser == null) {
             throw Exception('Please select a recipient customer.');
           }
-          await FirebaseService().sendNotification(
+          await SupabaseService().sendNotification(
             title: title,
             message: content,
             targetUserId: _selectedUser!.uid,

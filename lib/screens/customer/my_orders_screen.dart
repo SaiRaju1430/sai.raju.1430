@@ -215,8 +215,8 @@ class OrderHistoryCard extends StatelessWidget {
               ],
             ),
             
-            // Verification Code Display Panel if active (arriving)
-            if (!isFinalized) ...[
+            // Verification Code Display Panel
+            if (order.verificationCode.isNotEmpty) ...[
               const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(12),
@@ -225,35 +225,60 @@ class OrderHistoryCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: AppTheme.primaryColor.withOpacity(0.12)),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Delivery Verification Code',
-                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7)),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isFinalized ? 'Delivery Verification OTP (Recorded)' : 'Delivery Verification OTP',
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7)),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                isFinalized ? 'Verified upon order delivery' : 'Share at the door to receive package',
+                                style: const TextStyle(fontSize: 10, color: Colors.grey),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 2),
-                          const Text(
-                            'Share at the door to receive package',
-                            style: TextStyle(fontSize: 10, color: Colors.grey),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          order.verificationCode,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                            color: AppTheme.primaryColor,
+                            letterSpacing: 1.5,
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      order.verificationCode,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
-                        color: AppTheme.primaryColor,
-                        letterSpacing: 1.5,
+                    if (order.deleteAfter != null) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.access_time_rounded, size: 12, color: Colors.grey),
+                            const SizedBox(width: 5),
+                            Text(
+                              '3-day retention: record visible until ${DateFormat('dd MMM, hh:mm a').format(order.deleteAfter!)}',
+                              style: TextStyle(fontSize: 10, color: Colors.grey.shade700, fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
@@ -738,16 +763,41 @@ class _RequestHistoryCardState extends State<RequestHistoryCard> {
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: Colors.green.shade300.withOpacity(0.4)),
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.check_circle_rounded, color: Colors.green.shade800, size: 20),
-                    const SizedBox(width: 8),
-                    const Expanded(
-                      child: Text(
-                        'This order has been delivered successfully. Thank you!',
-                        style: TextStyle(fontSize: 12, color: Colors.green, fontWeight: FontWeight.bold),
-                      ),
+                    Row(
+                      children: [
+                        Icon(Icons.check_circle_rounded, color: Colors.green.shade800, size: 20),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text(
+                            'This request has been delivered successfully. Thank you!',
+                            style: TextStyle(fontSize: 12, color: Colors.green, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
                     ),
+                    if (widget.request.verificationCode.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Delivery OTP (Verified):', style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w600)),
+                          Text(
+                            widget.request.verificationCode,
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.green),
+                          ),
+                        ],
+                      ),
+                    ],
+                    if (widget.request.deleteAfter != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        '3-day retention: record visible until ${DateFormat('dd MMM, hh:mm a').format(widget.request.deleteAfter!)}',
+                        style: TextStyle(fontSize: 10, color: Colors.grey.shade700, fontWeight: FontWeight.w500),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -760,16 +810,41 @@ class _RequestHistoryCardState extends State<RequestHistoryCard> {
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: Colors.red.shade300.withOpacity(0.4)),
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.cancel_outlined, color: Colors.red.shade800, size: 20),
-                    const SizedBox(width: 8),
-                    const Expanded(
-                      child: Text(
-                        'This request has been rejected by the admin.',
-                        style: TextStyle(fontSize: 12, color: Colors.red, fontWeight: FontWeight.w500),
-                      ),
+                    Row(
+                      children: [
+                        Icon(Icons.cancel_outlined, color: Colors.red.shade800, size: 20),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text(
+                            'This request has been rejected by the admin.',
+                            style: TextStyle(fontSize: 12, color: Colors.red, fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                      ],
                     ),
+                    if (widget.request.verificationCode.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('OTP Code:', style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w600)),
+                          Text(
+                            widget.request.verificationCode,
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.red),
+                          ),
+                        ],
+                      ),
+                    ],
+                    if (widget.request.deleteAfter != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        '3-day retention: record visible until ${DateFormat('dd MMM, hh:mm a').format(widget.request.deleteAfter!)}',
+                        style: TextStyle(fontSize: 10, color: Colors.grey.shade700, fontWeight: FontWeight.w500),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -940,57 +1015,87 @@ class FastFoodOrderHistoryCard extends StatelessWidget {
                 Text('₹${order.grandTotal.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: AppTheme.primaryColor)),
               ],
             ),
-            if (order.status != 'Delivered' && order.status != 'Rejected' && order.deliveryCode.isNotEmpty) ...[
+            if (order.deliveryCode.isNotEmpty) ...[
               const SizedBox(height: 12),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withOpacity(0.05),
+                  color: (order.status == 'Delivered' || order.status == 'Rejected')
+                      ? (order.status == 'Delivered' ? Colors.green.shade50.withOpacity(0.15) : Colors.red.shade50.withOpacity(0.15))
+                      : AppTheme.primaryColor.withOpacity(0.05),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppTheme.primaryColor.withOpacity(0.2)),
+                  border: Border.all(
+                    color: (order.status == 'Delivered' || order.status == 'Rejected')
+                        ? (order.status == 'Delivered' ? Colors.green.shade300 : Colors.red.shade300)
+                        : AppTheme.primaryColor.withOpacity(0.2),
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Row(
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Icon(Icons.check_circle, color: AppTheme.primaryColor, size: 18),
-                        SizedBox(width: 6),
+                        Row(
+                          children: [
+                            Icon(
+                              order.status == 'Delivered'
+                                  ? Icons.check_circle_rounded
+                                  : (order.status == 'Rejected' ? Icons.cancel_outlined : Icons.key_rounded),
+                              color: order.status == 'Delivered'
+                                  ? Colors.green.shade700
+                                  : (order.status == 'Rejected' ? Colors.red.shade700 : AppTheme.primaryColor),
+                              size: 18,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              order.status == 'Delivered'
+                                  ? 'Delivery OTP (Verified)'
+                                  : (order.status == 'Rejected' ? 'Delivery OTP (Rejected)' : 'Delivery OTP Code'),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: order.status == 'Delivered'
+                                    ? Colors.green.shade800
+                                    : (order.status == 'Rejected' ? Colors.red.shade800 : AppTheme.primaryColor),
+                              ),
+                            ),
+                          ],
+                        ),
                         Text(
-                          'Delivery OTP Code',
+                          order.deliveryCode,
                           style: TextStyle(
+                            fontSize: 20,
                             fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                            color: AppTheme.primaryColor,
+                            letterSpacing: 2.0,
+                            color: order.status == 'Delivered'
+                                ? Colors.green.shade800
+                                : (order.status == 'Rejected' ? Colors.red.shade800 : AppTheme.primaryColor),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Your Delivery Verification Code:',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     Text(
-                      order.deliveryCode,
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 2.0,
-                        color: AppTheme.primaryColor,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Please provide this code to the CampusKart delivery person when receiving your order.',
+                      order.status == 'Delivered'
+                          ? 'This fast food order has been delivered successfully.'
+                          : (order.status == 'Rejected'
+                              ? 'This fast food order was rejected.'
+                              : 'Please provide this code to the CampusKart delivery person when receiving your order.'),
                       style: TextStyle(
                         fontSize: 11,
                         color: Colors.grey.shade700,
                         height: 1.3,
                       ),
                     ),
+                    if (order.deleteAfter != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        '3-day retention: record visible until ${DateFormat('dd MMM, hh:mm a').format(order.deleteAfter!)}',
+                        style: TextStyle(fontSize: 10, color: Colors.grey.shade700, fontWeight: FontWeight.w500),
+                      ),
+                    ],
                   ],
                 ),
               ),

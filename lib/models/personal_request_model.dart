@@ -1,4 +1,16 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+DateTime? _parseDateTimeNullable(dynamic value) {
+  if (value == null) return null;
+  if (value is DateTime) return value;
+  if (value is String) return DateTime.tryParse(value);
+  if (value.runtimeType.toString() == 'Timestamp') {
+    return (value as dynamic).toDate();
+  }
+  return null;
+}
+
+DateTime _parseDateTime(dynamic value) {
+  return _parseDateTimeNullable(value) ?? DateTime.now();
+}
 
 class PersonalRequestModel {
   final String id; // maps to requestId
@@ -18,6 +30,14 @@ class PersonalRequestModel {
   final String verificationCode;
   final String status;
   final DateTime requestDate; // maps to createdAt
+  final bool deliveryVerified;
+  final DateTime? deliveredAt;
+  final DateTime? rejectedAt;
+  final DateTime? completedAt;
+  final DateTime? deleteAfter;
+
+  String get itemName => description;
+  double? get quotedPrice => productPrice > 0 ? productPrice : null;
 
   PersonalRequestModel({
     required this.id,
@@ -37,36 +57,43 @@ class PersonalRequestModel {
     required this.verificationCode,
     required this.status,
     required this.requestDate,
+    this.deliveryVerified = false,
+    this.deliveredAt,
+    this.rejectedAt,
+    this.completedAt,
+    this.deleteAfter,
   });
 
   factory PersonalRequestModel.fromMap(Map<String, dynamic> data, String id) {
     return PersonalRequestModel(
-      id: id,
-      customerId: data['customerId'] ?? '',
-      customerName: data['customerName'] ?? '',
-      customerMobile: data['mobileNumber'] ?? data['customerMobile'] ?? '',
-      blockName: data['blockName'] ?? '',
-      roomNumber: data['roomNumber'] ?? '',
+      id: id.isEmpty ? (data['id'] ?? '') : id,
+      customerId: data['customerId'] ?? data['customer_id'] ?? '',
+      customerName: data['customerName'] ?? data['customer_name'] ?? '',
+      customerMobile: data['mobileNumber'] ?? data['customerMobile'] ?? data['customer_mobile'] ?? '',
+      blockName: data['blockName'] ?? data['block_name'] ?? '',
+      roomNumber: data['roomNumber'] ?? data['room_number'] ?? '',
       description: data['description'] ?? '',
-      imageUrl: data['imageUrl'] ?? '',
-      productPrice: (data['productPrice'] ?? 0.0).toDouble(),
-      deliveryCharge: (data['deliveryCharge'] ?? 0.0).toDouble(),
-      totalAmount: (data['totalAmount'] ?? 0.0).toDouble(),
-      paymentId: data['paymentId'] ?? '',
-      paymentAccountName: data['paymentAccountName'] ?? '',
-      paymentMobileNumber: data['paymentMobileNumber'] ?? '',
-      verificationCode: data['verificationCode']?.toString() ?? '',
+      imageUrl: data['imageUrl'] ?? data['image_url'] ?? '',
+      productPrice: (data['productPrice'] ?? data['product_price'] ?? 0.0).toDouble(),
+      deliveryCharge: (data['deliveryCharge'] ?? data['delivery_charge'] ?? 0.0).toDouble(),
+      totalAmount: (data['totalAmount'] ?? data['total_amount'] ?? 0.0).toDouble(),
+      paymentId: data['paymentId'] ?? data['payment_id'] ?? '',
+      paymentAccountName: data['paymentAccountName'] ?? data['payment_account_name'] ?? '',
+      paymentMobileNumber: data['paymentMobileNumber'] ?? data['payment_mobile_number'] ?? '',
+      verificationCode: data['verificationCode']?.toString() ?? data['verification_code']?.toString() ?? '',
       status: data['status'] ?? 'Pending Review',
-      requestDate: data['createdAt'] != null
-          ? (data['createdAt'] as Timestamp).toDate()
-          : data['requestDate'] != null
-              ? (data['requestDate'] as Timestamp).toDate()
-              : DateTime.now(),
+      requestDate: _parseDateTime(data['createdAt'] ?? data['created_at'] ?? data['requestDate'] ?? data['request_date']),
+      deliveryVerified: data['deliveryVerified'] ?? data['delivery_verified'] ?? data['otpVerified'] ?? false,
+      deliveredAt: _parseDateTimeNullable(data['deliveredAt'] ?? data['delivered_at']),
+      rejectedAt: _parseDateTimeNullable(data['rejectedAt'] ?? data['rejected_at']),
+      completedAt: _parseDateTimeNullable(data['completedAt'] ?? data['completed_at']),
+      deleteAfter: _parseDateTimeNullable(data['deleteAfter'] ?? data['delete_after']),
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
+      'id': id,
       'customerId': customerId,
       'customerName': customerName,
       'mobileNumber': customerMobile,
@@ -82,9 +109,20 @@ class PersonalRequestModel {
       'paymentAccountName': paymentAccountName,
       'paymentMobileNumber': paymentMobileNumber,
       'verificationCode': verificationCode,
+      'verification_code': verificationCode,
       'status': status,
-      'createdAt': Timestamp.fromDate(requestDate),
-      'requestDate': Timestamp.fromDate(requestDate),
+      'createdAt': requestDate.toIso8601String(),
+      'requestDate': requestDate.toIso8601String(),
+      'deliveryVerified': deliveryVerified,
+      'delivery_verified': deliveryVerified,
+      'deliveredAt': deliveredAt?.toIso8601String(),
+      'delivered_at': deliveredAt?.toIso8601String(),
+      'rejectedAt': rejectedAt?.toIso8601String(),
+      'rejected_at': rejectedAt?.toIso8601String(),
+      'completedAt': completedAt?.toIso8601String(),
+      'completed_at': completedAt?.toIso8601String(),
+      'deleteAfter': deleteAfter?.toIso8601String(),
+      'delete_after': deleteAfter?.toIso8601String(),
     };
   }
 
@@ -106,6 +144,11 @@ class PersonalRequestModel {
     String? verificationCode,
     String? status,
     DateTime? requestDate,
+    bool? deliveryVerified,
+    DateTime? deliveredAt,
+    DateTime? rejectedAt,
+    DateTime? completedAt,
+    DateTime? deleteAfter,
   }) {
     return PersonalRequestModel(
       id: id ?? this.id,
@@ -125,6 +168,11 @@ class PersonalRequestModel {
       verificationCode: verificationCode ?? this.verificationCode,
       status: status ?? this.status,
       requestDate: requestDate ?? this.requestDate,
+      deliveryVerified: deliveryVerified ?? this.deliveryVerified,
+      deliveredAt: deliveredAt ?? this.deliveredAt,
+      rejectedAt: rejectedAt ?? this.rejectedAt,
+      completedAt: completedAt ?? this.completedAt,
+      deleteAfter: deleteAfter ?? this.deleteAfter,
     );
   }
 }

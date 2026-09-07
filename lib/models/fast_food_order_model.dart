@@ -1,4 +1,16 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+DateTime? _parseDateTimeNullable(dynamic value) {
+  if (value == null) return null;
+  if (value is DateTime) return value;
+  if (value is String) return DateTime.tryParse(value);
+  if (value.runtimeType.toString() == 'Timestamp') {
+    return (value as dynamic).toDate();
+  }
+  return null;
+}
+
+DateTime _parseDateTime(dynamic value) {
+  return _parseDateTimeNullable(value) ?? DateTime.now();
+}
 
 class FastFoodOrderItemModel {
   final String name;
@@ -54,6 +66,9 @@ class FastFoodOrderModel {
   final String deliveryCode;
   final bool deliveryVerified;
   final DateTime? deliveredAt;
+  final DateTime? rejectedAt;
+  final DateTime? completedAt;
+  final DateTime? deleteAfter;
 
   FastFoodOrderModel({
     required this.orderId,
@@ -77,6 +92,9 @@ class FastFoodOrderModel {
     this.deliveryCode = '',
     this.deliveryVerified = false,
     this.deliveredAt,
+    this.rejectedAt,
+    this.completedAt,
+    this.deleteAfter,
   });
 
   factory FastFoodOrderModel.fromMap(Map<String, dynamic> data, String id) {
@@ -85,38 +103,33 @@ class FastFoodOrderModel {
         .map((item) => FastFoodOrderItemModel.fromMap(Map<String, dynamic>.from(item)))
         .toList();
 
-    double parsedSubtotal = (data['foodTotal'] ?? data['subtotal'] ?? 0.0).toDouble();
-    double parsedDeliveryFee = (data['deliveryCharge'] ?? data['deliveryFee'] ?? 0.0).toDouble();
-    double parsedCodCharge = (data['codCharge'] ?? 0.0).toDouble();
-    String parsedPaymentMethod = data['paymentMethod'] ?? 'Online';
-    double parsedGrandTotal = (data['grandTotal'] ?? data['totalAmount'] ?? 0.0).toDouble();
+    double parsedSubtotal = (data['foodTotal'] ?? data['food_total'] ?? data['subtotal'] ?? 0.0).toDouble();
+    double parsedDeliveryFee = (data['deliveryCharge'] ?? data['delivery_charge'] ?? data['deliveryFee'] ?? 0.0).toDouble();
+    double parsedCodCharge = (data['codCharge'] ?? data['cod_charge'] ?? 0.0).toDouble();
+    String parsedPaymentMethod = data['paymentMethod'] ?? data['payment_method'] ?? 'Online';
+    double parsedGrandTotal = (data['grandTotal'] ?? data['grand_total'] ?? data['totalAmount'] ?? data['total_amount'] ?? 0.0).toDouble();
 
-    String parsedDeliveryCode = data['deliveryOtp'] ?? data['deliveryCode'] ?? data['verificationOtp'] ?? '';
-    bool parsedDeliveryVerified = data['otpVerified'] ?? data['deliveryVerified'] ?? data['otpUsed'] ?? false;
-    DateTime? parsedDeliveredAt = data['deliveredAt'] != null
-        ? (data['deliveredAt'] is Timestamp 
-            ? (data['deliveredAt'] as Timestamp).toDate()
-            : DateTime.parse(data['deliveredAt']))
-        : null;
+    String parsedDeliveryCode = data['deliveryOtp'] ?? data['deliveryCode'] ?? data['delivery_code'] ?? data['verificationOtp'] ?? '';
+    bool parsedDeliveryVerified = data['otpVerified'] ?? data['deliveryVerified'] ?? data['delivery_verified'] ?? data['otpUsed'] ?? false;
+    DateTime? parsedDeliveredAt = _parseDateTimeNullable(data['deliveredAt'] ?? data['delivered_at']);
+    DateTime? parsedRejectedAt = _parseDateTimeNullable(data['rejectedAt'] ?? data['rejected_at']);
+    DateTime? parsedCompletedAt = _parseDateTimeNullable(data['completedAt'] ?? data['completed_at']);
+    DateTime? parsedDeleteAfter = _parseDateTimeNullable(data['deleteAfter'] ?? data['delete_after']);
 
     return FastFoodOrderModel(
-      orderId: id.isEmpty ? (data['orderId'] ?? '') : id,
-      customerId: data['customerId'] ?? '',
-      customerName: data['customerName'] ?? '',
+      orderId: id.isEmpty ? (data['orderId'] ?? data['id'] ?? '') : id,
+      customerId: data['customerId'] ?? data['customer_id'] ?? '',
+      customerName: data['customerName'] ?? data['customer_name'] ?? '',
       mobile: data['mobile'] ?? '',
-      blockName: data['blockName'] ?? '',
-      roomNumber: data['roomNumber'] ?? '',
+      blockName: data['blockName'] ?? data['block_name'] ?? '',
+      roomNumber: data['roomNumber'] ?? data['room_number'] ?? '',
       items: parsedItems,
       subtotal: parsedSubtotal,
       deliveryFee: parsedDeliveryFee,
       totalAmount: parsedGrandTotal,
-      paymentId: data['paymentId'] ?? '',
+      paymentId: data['paymentId'] ?? data['payment_id'] ?? '',
       status: data['status'] ?? 'Pending',
-      createdAt: data['createdAt'] != null
-          ? (data['createdAt'] is Timestamp 
-              ? (data['createdAt'] as Timestamp).toDate()
-              : DateTime.parse(data['createdAt']))
-          : DateTime.now(),
+      createdAt: _parseDateTime(data['createdAt'] ?? data['created_at']),
       foodTotal: parsedSubtotal,
       deliveryCharge: parsedDeliveryFee,
       codCharge: parsedCodCharge,
@@ -125,6 +138,9 @@ class FastFoodOrderModel {
       deliveryCode: parsedDeliveryCode,
       deliveryVerified: parsedDeliveryVerified,
       deliveredAt: parsedDeliveredAt,
+      rejectedAt: parsedRejectedAt,
+      completedAt: parsedCompletedAt,
+      deleteAfter: parsedDeleteAfter,
     );
   }
 
@@ -142,7 +158,7 @@ class FastFoodOrderModel {
       'totalAmount': totalAmount,
       'paymentId': paymentId,
       'status': status,
-      'createdAt': Timestamp.fromDate(createdAt),
+      'createdAt': createdAt.toIso8601String(),
       'foodTotal': foodTotal,
       'deliveryCharge': deliveryCharge,
       'codCharge': codCharge,
@@ -150,9 +166,18 @@ class FastFoodOrderModel {
       'grandTotal': grandTotal,
       'deliveryCode': deliveryCode,
       'deliveryOtp': deliveryCode,
+      'delivery_code': deliveryCode,
       'deliveryVerified': deliveryVerified,
+      'delivery_verified': deliveryVerified,
       'otpVerified': deliveryVerified,
-      'deliveredAt': deliveredAt != null ? Timestamp.fromDate(deliveredAt!) : null,
+      'deliveredAt': deliveredAt?.toIso8601String(),
+      'delivered_at': deliveredAt?.toIso8601String(),
+      'rejectedAt': rejectedAt?.toIso8601String(),
+      'rejected_at': rejectedAt?.toIso8601String(),
+      'completedAt': completedAt?.toIso8601String(),
+      'completed_at': completedAt?.toIso8601String(),
+      'deleteAfter': deleteAfter?.toIso8601String(),
+      'delete_after': deleteAfter?.toIso8601String(),
     };
   }
 
@@ -178,6 +203,9 @@ class FastFoodOrderModel {
     String? deliveryCode,
     bool? deliveryVerified,
     DateTime? deliveredAt,
+    DateTime? rejectedAt,
+    DateTime? completedAt,
+    DateTime? deleteAfter,
   }) {
     return FastFoodOrderModel(
       orderId: orderId ?? this.orderId,
@@ -201,6 +229,9 @@ class FastFoodOrderModel {
       deliveryCode: deliveryCode ?? this.deliveryCode,
       deliveryVerified: deliveryVerified ?? this.deliveryVerified,
       deliveredAt: deliveredAt ?? this.deliveredAt,
+      rejectedAt: rejectedAt ?? this.rejectedAt,
+      completedAt: completedAt ?? this.completedAt,
+      deleteAfter: deleteAfter ?? this.deleteAfter,
     );
   }
 }

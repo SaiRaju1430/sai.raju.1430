@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/product_model.dart';
-import '../core/services/firebase_service.dart';
+import '../core/services/supabase_service.dart';
 
 class ProductProvider extends ChangeNotifier {
-  final FirebaseService _db = FirebaseService();
+  final SupabaseService _db = SupabaseService();
   
   List<ProductModel> _products = [];
   bool _isLoading = false;

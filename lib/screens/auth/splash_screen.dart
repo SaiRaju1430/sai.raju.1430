@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../core/services/firebase_service.dart';
+import '../../core/services/supabase_service.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
@@ -39,8 +39,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   }
 
   Future<void> _bootstrapApp() async {
-    // 1. Initialize Firebase/Mock service
-    await FirebaseService().initialize();
+    // 1. Initialize Supabase/Mock service
+    await SupabaseService().initialize();
     
     if (mounted) {
       // Initialize notification service

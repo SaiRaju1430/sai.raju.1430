@@ -1,16 +1,22 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/services/supabase_service.dart';
+import '../../constants/demo_images.dart';
 import '../../models/product_model.dart';
 import '../../providers/product_provider.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_textfield.dart';
+import '../../widgets/app_image.dart';
+import '../../widgets/demo_image_picker_sheet.dart';
 
 class EditProductScreen extends StatefulWidget {
   final ProductModel product;
 
-  const EditProductScreen({Key? key, required this.product}) : super(key: key);
+  const EditProductScreen({super.key, required this.product});
 
   @override
   State<EditProductScreen> createState() => _EditProductScreenState();
@@ -30,21 +36,42 @@ class _EditProductScreenState extends State<EditProductScreen> {
   late bool _available;
   bool _notifyCustomers = false;
 
+  late String _selectedImageUrl;
+  late String _selectedImageLabel;
+  bool _isUploadingImage = false;
+
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.product.name);
     _priceController = TextEditingController(text: widget.product.price.toStringAsFixed(0));
     _qtyController = TextEditingController(text: widget.product.quantity.toString());
-    _imageController = TextEditingController(text: widget.product.imageUrl);
     _descController = TextEditingController(text: widget.product.description);
     _selectedCategory = widget.product.category;
     _selectedUnit = widget.product.unit;
     _available = widget.product.available;
+
+    _selectedImageUrl = widget.product.imageUrl;
+    _selectedImageLabel = _selectedImageUrl.startsWith('assets/')
+        ? 'Demo Asset Image'
+        : (_selectedImageUrl.isNotEmpty ? 'Custom Image' : 'No Image');
+    _imageController = TextEditingController(text: widget.product.imageUrl.startsWith('http') ? widget.product.imageUrl : '');
+    _imageController.addListener(_onImageUrlChanged);
+  }
+
+  void _onImageUrlChanged() {
+    final text = _imageController.text.trim();
+    if (text.isNotEmpty && text != _selectedImageUrl) {
+      setState(() {
+        _selectedImageUrl = text;
+        _selectedImageLabel = 'Custom URL';
+      });
+    }
   }
 
   @override
   void dispose() {
+    _imageController.removeListener(_onImageUrlChanged);
     _nameController.dispose();
     _priceController.dispose();
     _qtyController.dispose();
@@ -53,7 +80,88 @@ class _EditProductScreenState extends State<EditProductScreen> {
     super.dispose();
   }
 
+  Future<void> _handleChooseDemoImage() async {
+    final selected = await DemoImagePickerSheet.show(
+      context,
+      items: DemoImages.generalProducts,
+      title: 'Choose General Product Demo Image',
+      currentSelectedPath: _selectedImageUrl,
+    );
+
+    if (selected != null && mounted) {
+      setState(() {
+        _selectedImageUrl = selected.assetPath;
+        _selectedImageLabel = 'Demo: ${selected.name}';
+        _imageController.clear();
+      });
+    }
+  }
+
+  Future<void> _handleUploadCustomImage() async {
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+        maxWidth: 1024,
+      );
+
+      if (pickedFile == null) return;
+
+      setState(() => _isUploadingImage = true);
+
+      final Uint8List bytes = await pickedFile.readAsBytes();
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final fileExtension = pickedFile.name.split('.').last.toLowerCase();
+      final path = 'products/prod_${timestamp}.$fileExtension';
+
+      final publicUrl = await SupabaseService().uploadImageBytes(
+        bucketName: 'product-images',
+        path: path,
+        bytes: bytes,
+        contentType: 'image/$fileExtension',
+      );
+
+      if (mounted) {
+        setState(() {
+          _selectedImageUrl = publicUrl;
+          _selectedImageLabel = 'Custom Uploaded Image';
+          _imageController.text = publicUrl;
+          _isUploadingImage = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Custom image uploaded successfully!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isUploadingImage = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Image upload failed: $e'),
+            backgroundColor: Colors.red.shade600,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _handleUpdate() async {
+    if (_selectedImageUrl.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select or upload a product image.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     if (_formKey.currentState!.validate()) {
       final productProvider = Provider.of<ProductProvider>(context, listen: false);
 
@@ -62,7 +170,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
         category: _selectedCategory,
         price: double.parse(_priceController.text.trim()),
         quantity: int.parse(_qtyController.text.trim()),
-        imageUrl: _imageController.text.trim(),
+        imageUrl: _selectedImageUrl.trim(),
         description: _descController.text.trim(),
         unit: _selectedUnit,
         available: _available && int.parse(_qtyController.text.trim()) > 0,
@@ -109,10 +217,143 @@ class _EditProductScreenState extends State<EditProductScreen> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Edit stock quantities, descriptions, pricing adjustments, or units.',
-                  style: TextStyle(fontSize: 12, color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7)),
+                  'Edit stock quantities, descriptions, pricing adjustments, units, or images.',
+                  style: TextStyle(fontSize: 12, color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7)),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 28),
+
+                // ========================================================
+                // --- PRODUCT IMAGE SECTION (PREVIEW & DEMO/CUSTOM PICKER) ---
+                // ========================================================
+                Text(
+                  'Product Image',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).textTheme.bodyLarge?.color,
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                // Live Image Preview Card
+                Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: Column(
+                    children: [
+                      // Preview Area
+                      Container(
+                        height: 180,
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
+                        ),
+                        child: _isUploadingImage
+                            ? const Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    CircularProgressIndicator(),
+                                    SizedBox(height: 12),
+                                    Text('Uploading custom image to Supabase...', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                                  ],
+                                ),
+                              )
+                            : Center(
+                                child: AppImage(
+                                  imageUrl: _selectedImageUrl,
+                                  height: 156,
+                                  fit: BoxFit.contain,
+                                  fallbackIcon: Icons.add_photo_alternate_outlined,
+                                ),
+                              ),
+                      ),
+
+                      // Info bar below image
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryColor.withValues(alpha: 0.06),
+                          borderRadius: const BorderRadius.vertical(bottom: Radius.circular(15)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.check_circle_rounded, color: AppTheme.primaryColor, size: 16),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Selected: $_selectedImageLabel',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.primaryColor,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // Action Buttons: [ Choose Demo Image ] OR [ Upload Custom Image ]
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: _handleChooseDemoImage,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        icon: const Icon(Icons.collections_rounded, size: 18),
+                        label: const Text(
+                          'Choose Demo Image',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _isUploadingImage ? null : _handleUploadCustomImage,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppTheme.primaryColor,
+                          side: const BorderSide(color: AppTheme.primaryColor, width: 1.5),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        icon: const Icon(Icons.cloud_upload_rounded, size: 18),
+                        label: const Text(
+                          'Upload Custom Image',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Optional Direct URL input
+                CustomTextField(
+                  label: 'Or Custom Image URL (Optional)',
+                  hint: 'https://images.com/my-photo.jpg',
+                  controller: _imageController,
+                  prefixIcon: Icons.link_rounded,
+                ),
+                const SizedBox(height: 24),
 
                 // Name
                 CustomTextField(
@@ -154,7 +395,6 @@ class _EditProductScreenState extends State<EditProductScreen> {
                               if (val != null) {
                                 setState(() {
                                   _selectedCategory = val;
-                                  // Auto-adjust default unit based on selected category
                                   if (val == 'Vegetables' || val == 'Fruits') {
                                     _selectedUnit = 'kg';
                                   } else if (val == 'Dairy') {
@@ -186,7 +426,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
                             decoration: const InputDecoration(
                               contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                             ),
-                            items: ['kg', 'gram', 'litre', 'ml', 'packet', 'piece'].map((u) {
+                            items: ['kg', 'gram', 'litre', 'ml', 'packet', 'piece', 'portion'].map((u) {
                               return DropdownMenuItem<String>(
                                 value: u,
                                 child: Text(u, style: const TextStyle(fontSize: 13)),
@@ -257,20 +497,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 18),
-
-                // Custom Image URL Field
-                CustomTextField(
-                  label: 'Product Image URL',
-                  hint: 'https://images.com/my-image.jpg',
-                  controller: _imageController,
-                  prefixIcon: Icons.image_rounded,
-                  validator: (val) {
-                    if (val == null || val.trim().isEmpty) return 'Image link is required.';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
                 // Product Status Toggle
                 Card(
@@ -316,7 +543,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
                 // Submit Button
                 CustomButton(
                   text: 'UPDATE PRODUCT',
-                  isLoading: productProvider.isLoading,
+                  isLoading: productProvider.isLoading || _isUploadingImage,
                   onPressed: _handleUpdate,
                 ),
                 const SizedBox(height: 24),

@@ -4,13 +4,13 @@ import 'package:flutter/material.dart';
 import '../models/order_model.dart';
 import '../models/product_model.dart';
 import '../models/personal_request_model.dart';
-import '../core/services/firebase_service.dart';
+import '../core/services/supabase_service.dart';
 import '../core/services/notification_service.dart';
 import '../core/utils/delivery_calculator.dart';
 import '../core/constants/app_constants.dart';
 
 class OrderProvider extends ChangeNotifier {
-  final FirebaseService _db = FirebaseService();
+  final SupabaseService _db = SupabaseService();
 
   // Shopping Cart: Product ID -> OrderItemModel
   final Map<String, OrderItemModel> _cart = {};
@@ -28,6 +28,9 @@ class OrderProvider extends ChangeNotifier {
   bool _isOwnerAvailable = true;
 
   Map<String, OrderItemModel> get cart => _cart;
+  List<OrderItemModel> get cartItems => _cart.values.toList();
+  int get cartItemCount => _cart.values.fold(0, (sum, item) => sum + item.quantity);
+  int getCartQuantity(String productId) => _cart[productId]?.quantity ?? 0;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   String? get lastPlacedOrderId => _lastPlacedOrderId;
@@ -229,6 +232,7 @@ class OrderProvider extends ChangeNotifier {
   }
 
   bool get isMinOrderSatisfied => cartSubtotal >= AppConstants.minOrderValue;
+  double get minOrderAmount => AppConstants.minOrderValue;
 
   Map<String, dynamic> checkServiceAvailability() {
     if (_db.isOfflineMode) {
@@ -283,7 +287,7 @@ class OrderProvider extends ChangeNotifier {
       String verificationCode = (1000 + random.nextInt(9000)).toString(); // e.g. 4821
 
       OrderModel newOrder = OrderModel(
-        id: '', // Will be assigned by Firebase/Mock
+        id: '', // Will be assigned by Supabase
         customerId: customerId,
         customerName: customerName,
         customerMobile: customerMobile,

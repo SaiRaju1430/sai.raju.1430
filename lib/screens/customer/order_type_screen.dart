@@ -4,6 +4,7 @@ import '../../core/theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/broadcast_provider.dart';
 import '../../providers/fast_food_provider.dart';
+import '../../widgets/responsive_container.dart';
 import '../auth/login_screen.dart';
 import 'home_screen.dart';
 import 'personal_order_screen.dart';
@@ -29,7 +30,8 @@ class OrderTypeScreen extends StatelessWidget {
           ),
         ),
         child: SafeArea(
-          child: Padding(
+          child: ResponsiveContainer(
+            maxWidth: 800,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -132,13 +134,13 @@ class OrderTypeScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 20),
 
                 // Choice cards
                 Expanded(
                   child: SingleChildScrollView(
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // General Catalog Card
                         PortalCard(

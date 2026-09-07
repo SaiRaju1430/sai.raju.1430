@@ -1,18 +1,19 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/order_model.dart';
 import '../models/personal_request_model.dart';
 import '../models/earnings_model.dart';
-import '../core/services/firebase_service.dart';
+import '../models/user_model.dart';
+import '../core/services/supabase_service.dart';
 import '../core/services/notification_service.dart';
 import '../core/services/whatsapp_service.dart';
 
 class AdminProvider extends ChangeNotifier {
-  final FirebaseService _db = FirebaseService();
+  final SupabaseService _db = SupabaseService();
 
   List<OrderModel> _allOrders = [];
   List<PersonalRequestModel> _allRequests = [];
+  List<UserModel> _allCustomers = [];
   bool _isOwnerAvailable = true;
   bool _sendNotificationOnNewItem = true;
   bool _isLoading = false;
@@ -20,11 +21,13 @@ class AdminProvider extends ChangeNotifier {
 
   StreamSubscription<List<OrderModel>>? _ordersSubscription;
   StreamSubscription<List<PersonalRequestModel>>? _requestsSubscription;
+  StreamSubscription<List<UserModel>>? _customersSubscription;
   StreamSubscription<bool>? _availabilitySubscription;
   StreamSubscription<bool>? _sendNotificationOnNewItemSubscription;
 
   List<OrderModel> get allOrders => _allOrders;
   List<PersonalRequestModel> get allRequests => _allRequests;
+  List<UserModel> get allCustomers => _allCustomers;
   bool get isOwnerAvailable => _isOwnerAvailable;
   bool get sendNotificationOnNewItem => _sendNotificationOnNewItem;
   bool get isLoading => _isLoading;
@@ -43,8 +46,6 @@ class AdminProvider extends ChangeNotifier {
 
     _ordersSubscription?.cancel();
     _ordersSubscription = _db.streamAllOrders().listen((orders) {
-      print("Admin loaded ${orders.length} orders from database.");
-      
       // If known order list is already populated, notify on any new order additions
       if (_knownOrderIds.isNotEmpty) {
         for (var order in orders) {
@@ -84,6 +85,12 @@ class AdminProvider extends ChangeNotifier {
 
       _allRequests = reqs;
       _isLoading = false;
+      notifyListeners();
+    });
+
+    _customersSubscription?.cancel();
+    _customersSubscription = _db.streamAllUsers().listen((users) {
+      _allCustomers = users.where((u) => u.role == 'customer').toList();
       notifyListeners();
     });
 
@@ -239,113 +246,126 @@ class AdminProvider extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
     try {
-      print("CampusKart Verify: Starting verification. orderId='$orderId', inputCode='$inputCode'");
+      debugPrint("CampusKart Verify: Starting verification for orderId='$orderId', inputCode='$inputCode'");
 
-      PersonalRequestModel? matchedReq;
-      if (!_db.isOfflineMode) {
-        try {
-          final doc = await FirebaseFirestore.instance
-              .collection('personal_requests')
-              .doc(orderId)
-              .get();
-          if (doc.exists && doc.data() != null) {
-            matchedReq = PersonalRequestModel.fromMap(doc.data()!, doc.id);
-            print("CampusKart Verify: Direct Firestore document found for personal request: ${doc.id}");
+      // 1. Try Personal Requests
+      try {
+        final doc = await _db.client
+            .from('personal_requests')
+            .select()
+            .eq('id', orderId)
+            .maybeSingle();
+
+        if (doc != null) {
+          final matchedReq = PersonalRequestModel.fromMap(doc, doc['id'] ?? '');
+          final String storedOtp = matchedReq.verificationCode.toString().trim();
+          final String enteredOtp = inputCode.toString().trim();
+
+          if (storedOtp == enteredOtp) {
+            await _db.deliverPersonalRequest(orderId);
+            try {
+              await _db.sendNotification(
+                title: '🎉 Order Delivered',
+                message: 'Thank you for choosing CampusKart.',
+                targetUserId: matchedReq.customerId,
+              );
+            } catch (e) {
+              debugPrint("CampusKart Verify: Notification error: $e");
+            }
+            _isLoading = false;
+            notifyListeners();
+            return true;
           } else {
-            print("CampusKart Verify: Direct Firestore document NOT found for id: $orderId");
+            _errorMessage = 'Invalid Delivery Code. Please verify and try again.';
+            _isLoading = false;
+            notifyListeners();
+            return false;
           }
-        } catch (e) {
-          print("CampusKart Verify: Direct Firestore query failed: $e");
         }
+      } catch (e) {
+        debugPrint("Personal request verification query: $e");
       }
 
-      // Fallback to local request list (e.g. offline mock mode or if Firestore fetch failed)
-      if (matchedReq == null) {
-        matchedReq = _allRequests.cast<PersonalRequestModel?>().firstWhere(
-          (r) => r!.id == orderId,
-          orElse: () => null,
-        );
-      }
+      // 2. Try General Orders
+      try {
+        final orderDoc = await _db.client
+            .from('orders')
+            .select()
+            .eq('id', orderId)
+            .maybeSingle();
 
-      if (matchedReq != null) {
-        final String storedOtp = matchedReq.verificationCode.toString().trim();
-        final String enteredOtp = inputCode.toString().trim();
-
-        // URGENT AUDIT LOGS
-        print("CampusKart Verify Audit: Request ID='${matchedReq.id}', Document ID='$orderId', Stored OTP='$storedOtp', Entered OTP='$enteredOtp'");
-
-        if (storedOtp == enteredOtp) {
-          // Mark delivered with timestamp in Firestore
-          await _db.deliverPersonalRequest(orderId);
-
-          // Send customer delivery notification
-          try {
-            await _db.sendNotification(
-              title: '🎉 Order Delivered',
-              message: 'Thank you for choosing CampusKart.',
-              targetUserId: matchedReq.customerId,
-            );
-          } catch (e) {
-            print("CampusKart Verify: Failed to send delivery notification: $e");
+        if (orderDoc != null) {
+          final storedCode = (orderDoc['verification_code'] ?? '').toString().trim();
+          if (storedCode == inputCode.trim()) {
+            await _db.updateOrderStatus(orderId, 'Delivered');
+            final custId = (orderDoc['customer_id'] ?? '').toString();
+            if (custId.isNotEmpty) {
+              await _db.sendNotification(
+                title: '🎉 Order Delivered',
+                message: 'Thank you for choosing CampusKart.',
+                targetUserId: custId,
+              );
+            }
+            _isLoading = false;
+            notifyListeners();
+            return true;
+          } else {
+            _errorMessage = 'Invalid Delivery Code. Please verify and try again.';
+            _isLoading = false;
+            notifyListeners();
+            return false;
           }
-
-          print("CampusKart Verify: Personal request DELIVERED successfully.");
-          _isLoading = false;
-          notifyListeners();
-          return true;
-        } else {
-          print("CampusKart Verify: Code mismatch. stored='$storedOtp' entered='$enteredOtp'");
-          _errorMessage = 'Invalid Delivery Code. Please verify and try again.';
-          _isLoading = false;
-          notifyListeners();
-          return false;
         }
+      } catch (e) {
+        debugPrint("General order verification query: $e");
       }
 
-      // --- Try General Orders ---
-      final OrderModel? matchedOrder = _allOrders.cast<OrderModel?>().firstWhere(
-        (o) => o!.id == orderId,
-        orElse: () => null,
-      );
+      // 3. Try Fast Food Orders
+      try {
+        final ffDoc = await _db.client
+            .from('fast_food_orders')
+            .select()
+            .eq('id', orderId)
+            .maybeSingle();
 
-      if (matchedOrder != null) {
-        print("CampusKart Verify: Found general order. storedCode='${matchedOrder.verificationCode}' entered='$inputCode'");
-        if (matchedOrder.verificationCode.toString().trim() == inputCode.trim()) {
-          await _db.updateOrderStatus(orderId, 'Delivered');
-          await _db.sendNotification(
-            title: '🎉 Order Delivered',
-            message: 'Thank you for choosing CampusKart.',
-            targetUserId: matchedOrder.customerId,
-          );
-          print("CampusKart Verify: General order DELIVERED successfully.");
-          _isLoading = false;
-          notifyListeners();
-          return true;
-        } else {
-          print("CampusKart Verify: Code mismatch. stored='${matchedOrder.verificationCode}' entered='$inputCode'");
-          _errorMessage = 'Invalid Delivery Code. Please verify and try again.';
-          _isLoading = false;
-          notifyListeners();
-          return false;
+        if (ffDoc != null) {
+          final storedCode = (ffDoc['delivery_code'] ?? '').toString().trim();
+          if (storedCode == inputCode.trim()) {
+            await _db.verifyAndDeliverFastFoodOrder(orderId);
+            final custId = (ffDoc['customer_id'] ?? '').toString();
+            if (custId.isNotEmpty) {
+              await _db.sendNotification(
+                title: '🎉 Fast Food Delivered',
+                message: 'Thank you for choosing CampusKart.',
+                targetUserId: custId,
+              );
+            }
+            _isLoading = false;
+            notifyListeners();
+            return true;
+          } else {
+            _errorMessage = 'Invalid Delivery Code. Please verify and try again.';
+            _isLoading = false;
+            notifyListeners();
+            return false;
+          }
         }
+      } catch (e) {
+        debugPrint("Fast food verification query: $e");
       }
 
-      // --- Not found in either list ---
-      print("CampusKart Verify: orderId='$orderId' not found in allRequests (${_allRequests.length}) or allOrders (${_allOrders.length})");
       _errorMessage = 'Order/Request not found. Please refresh and try again.';
       _isLoading = false;
       notifyListeners();
       return false;
 
-    } catch (e, stack) {
-      print("CampusKart Verify: Exception caught: $e\n$stack");
+    } catch (e) {
       _errorMessage = 'Verification failed. Please try again.';
       _isLoading = false;
       notifyListeners();
       return false;
     }
   }
-
 
   // --- PERSONAL REQUESTS ACTIONS ---
 
@@ -393,11 +413,11 @@ class AdminProvider extends ChangeNotifier {
       
       await _db.sendNotification(
         title: '✅ Personal Request Approved',
-        message: 'Your personal request has been approved.',
+        message: 'Your personal request has been approved. Please submit payment.',
         targetUserId: req.customerId,
       );
 
-      // Auto-trigger WhatsApp notification
+      // Trigger WhatsApp notification
       await WhatsAppService.sendPaymentRequest(
         mobile: req.customerMobile,
         customerName: req.customerName,
@@ -425,7 +445,7 @@ class AdminProvider extends ChangeNotifier {
     try {
       final req = _allRequests.firstWhere((r) => r.id == requestId);
       
-      // Generate a secure random 4-digit OTP for doorstep delivery verification
+      // Generate secure 4-digit verification code
       final verificationCode = (1000 + (DateTime.now().millisecondsSinceEpoch % 9000)).toString();
       
       final updatedReq = req.copyWith(
@@ -434,7 +454,13 @@ class AdminProvider extends ChangeNotifier {
       );
       await _db.updatePersonalRequest(updatedReq);
       
-      // Auto-trigger WhatsApp receipt with verification code
+      await _db.sendNotification(
+        title: '💳 Payment Verified',
+        message: 'Payment verified! Your verification code is $verificationCode.',
+        targetUserId: req.customerId,
+      );
+
+      // WhatsApp receipt with verification code
       await WhatsAppService.sendVerificationReceipt(
         mobile: req.customerMobile,
         customerName: req.customerName,
@@ -483,9 +509,13 @@ class AdminProvider extends ChangeNotifier {
     await _db.sendNotification(
       title: available ? '🏪 Owner Available' : '🏪 Owner Unavailable',
       message: available
-          ? 'The shop owner is now available. You can place general orders.'
+          ? 'The shop owner is now available. You can place orders.'
           : 'The shop owner is currently unavailable.',
     );
+  }
+
+  Future<void> toggleOwnerAvailability(bool available) async {
+    await toggleAvailability(available);
   }
 
   Future<void> toggleSendNotificationOnNewItem(bool enabled) async {
@@ -501,6 +531,7 @@ class AdminProvider extends ChangeNotifier {
   void dispose() {
     _ordersSubscription?.cancel();
     _requestsSubscription?.cancel();
+    _customersSubscription?.cancel();
     _availabilitySubscription?.cancel();
     _sendNotificationOnNewItemSubscription?.cancel();
     super.dispose();

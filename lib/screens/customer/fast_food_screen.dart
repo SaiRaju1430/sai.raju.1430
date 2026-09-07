@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../providers/fast_food_provider.dart';
 import '../../models/fast_food_item_model.dart';
+import '../../widgets/app_image.dart';
 import 'fast_food_cart_screen.dart';
 
 class FastFoodScreen extends StatelessWidget {
@@ -11,21 +12,23 @@ class FastFoodScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<FastFoodProvider>(context);
-    final cartCount = provider.cart.values.fold<int>(0, (sum, item) => sum + item.quantity);
+    final timerData = provider.timerData;
+    final bool isEnabled = timerData['fastFoodEnabled'] ?? false;
+    final String remainingTime = provider.remainingTimeString;
+    final int cartCount = provider.cartItemCount;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Fast Food Kitchen'),
+        title: const Text('Fast Food Corner 🍔'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
           Stack(
-            alignment: Alignment.center,
             children: [
               IconButton(
-                icon: const Icon(Icons.shopping_cart_rounded, size: 26, color: AppTheme.primaryColor),
+                icon: const Icon(Icons.shopping_bag_outlined),
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -35,12 +38,12 @@ class FastFoodScreen extends StatelessWidget {
               ),
               if (cartCount > 0)
                 Positioned(
-                  right: 4,
-                  top: 4,
+                  top: 8,
+                  right: 8,
                   child: Container(
                     padding: const EdgeInsets.all(4),
                     decoration: const BoxDecoration(
-                      color: Colors.red,
+                      color: AppTheme.primaryColor,
                       shape: BoxShape.circle,
                     ),
                     constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
@@ -53,232 +56,249 @@ class FastFoodScreen extends StatelessWidget {
                 ),
             ],
           ),
-          const SizedBox(width: 8),
         ],
       ),
       body: Column(
         children: [
-          Consumer<FastFoodProvider>(
-            builder: (context, fastFoodProvider, child) {
-              final timerData = fastFoodProvider.timerData;
-              final bool isEnabled = timerData['fastFoodEnabled'] ?? false;
-              final String remainingTime = fastFoodProvider.remainingTimeString;
-              
-              if (!isEnabled || remainingTime.isEmpty || remainingTime == '00:00') {
-                return const SizedBox.shrink();
-              }
-              
-              return Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                color: Colors.amber.shade100,
-                child: Row(
-                  children: [
-                    Icon(Icons.timer_outlined, color: Colors.amber.shade900, size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Fast Food Kitchen is open! Closes in $remainingTime. Order now!',
-                        style: TextStyle(
-                          color: Colors.amber.shade900,
+          // Live Countdown Banner
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: isEnabled && remainingTime != '00:00'
+                    ? [Colors.orange.shade700, AppTheme.primaryColor]
+                    : [Colors.grey.shade700, Colors.grey.shade900],
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  isEnabled && remainingTime != '00:00'
+                      ? Icons.timer_outlined
+                      : Icons.timer_off_outlined,
+                  color: Colors.white,
+                  size: 28,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isEnabled && remainingTime != '00:00'
+                            ? 'FAST FOOD ORDERING CLOSES IN'
+                            : 'ORDERING CURRENTLY CLOSED',
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 10,
                           fontWeight: FontWeight.bold,
-                          fontSize: 13,
+                          letterSpacing: 0.8,
                         ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        isEnabled && remainingTime != '00:00'
+                            ? remainingTime
+                            : 'Kitchen is closed right now',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: isEnabled && remainingTime != '00:00' ? 22 : 14,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: isEnabled && remainingTime != '00:00' ? 2.0 : 0.0,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Food Items List
+          Expanded(
+            child: provider.items.isEmpty
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.fastfood_outlined, size: 64, color: Colors.grey.shade300),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No fast food items available.',
+                            style: TextStyle(fontSize: 16, color: Colors.grey.shade500, fontWeight: FontWeight.bold),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
-              );
-            },
-          ),
-          Expanded(
-            child: provider.isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : provider.items.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.fastfood_outlined, size: 64, color: Colors.grey.shade300),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No fast food items available.',
-                              style: TextStyle(fontSize: 16, color: Colors.grey.shade500, fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
-                      )
-                    : ListView.separated(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: provider.items.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 16),
-                  itemBuilder: (context, index) {
-                    final item = provider.items[index];
-                    final inCartQty = provider.cart[item.id]?.quantity ?? 0;
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: provider.items.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 16),
+                    itemBuilder: (context, index) {
+                      final item = provider.items[index];
+                      final inCartQty = provider.cart[item.id]?.quantity ?? 0;
 
-                    return Card(
-                      elevation: 3,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Food Image
-                            Stack(
-                              children: [
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: Image.network(
-                                    item.imageUrl,
-                                    width: 100,
-                                    height: 100,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => Container(
+                      return Card(
+                        elevation: 3,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Food Image
+                              Stack(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: AppImage(
+                                      imageUrl: item.imageUrl,
                                       width: 100,
                                       height: 100,
-                                      color: Colors.grey.shade100,
-                                      child: const Icon(Icons.fastfood_rounded, color: Colors.grey, size: 40),
+                                      fit: BoxFit.cover,
+                                      fallbackIcon: Icons.fastfood_rounded,
                                     ),
                                   ),
-                                ),
-                                if (!item.available)
-                                  Positioned.fill(
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: Colors.black.withOpacity(0.6),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      alignment: Alignment.center,
-                                      child: const Text(
-                                        'OUT OF STOCK',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                          letterSpacing: 0.5,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                            const SizedBox(width: 16),
-                            // Details
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Category Badge & Name
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  if (!item.available)
+                                    Positioned.fill(
+                                      child: Container(
                                         decoration: BoxDecoration(
-                                          color: Colors.orange.shade50,
-                                          borderRadius: BorderRadius.circular(6),
+                                          color: Colors.black.withValues(alpha: 0.6),
+                                          borderRadius: BorderRadius.circular(12),
                                         ),
-                                        child: Text(
-                                          item.category,
+                                        alignment: Alignment.center,
+                                        child: const Text(
+                                          'OUT OF STOCK',
                                           style: TextStyle(
-                                            color: Colors.orange.shade800,
-                                            fontSize: 10,
+                                            color: Colors.white,
                                             fontWeight: FontWeight.bold,
+                                            fontSize: 10,
                                           ),
                                         ),
                                       ),
-                                      Text(
-                                        '₹${item.price.toStringAsFixed(0)}',
-                                        style: const TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.w900,
-                                          color: AppTheme.primaryColor,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    item.name,
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppTheme.textPrimary,
                                     ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    item.description,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: AppTheme.textSecondary,
-                                      height: 1.3,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  // Add to Cart Button or quantity controller
-                                  Align(
-                                    alignment: Alignment.bottomRight,
-                                    child: inCartQty > 0
-                                        ? Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              IconButton(
-                                                icon: const Icon(Icons.remove_circle_outline, color: AppTheme.primaryColor),
-                                                onPressed: () => provider.removeFromCart(item.id),
-                                                padding: EdgeInsets.zero,
-                                                constraints: const BoxConstraints(),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Text(
-                                                '$inCartQty',
-                                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                                              ),
-                                              IconButton(
-                                                icon: const Icon(Icons.add_circle_outline, color: AppTheme.primaryColor),
-                                                onPressed: () => provider.addToCart(item),
-                                                padding: EdgeInsets.zero,
-                                                constraints: const BoxConstraints(),
-                                              ),
-                                            ],
-                                          )
-                                        : ElevatedButton(
-                                            onPressed: item.available
-                                                ? () {
-                                                    provider.addToCart(item);
-                                                    ScaffoldMessenger.of(context).showSnackBar(
-                                                      SnackBar(
-                                                        content: Text('Added ${item.name} to cart!'),
-                                                        duration: const Duration(seconds: 1),
-                                                      ),
-                                                    );
-                                                  }
-                                                : null,
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: AppTheme.primaryColor,
-                                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius: BorderRadius.circular(8),
-                                              ),
-                                            ),
-                                            child: Text(
-                                              item.available ? 'Add To Cart' : 'Out Of Stock',
-                                              style: const TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold),
-                                            ),
-                                          ),
-                                  ),
                                 ],
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 14),
+
+                              // Food Details
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            item.category,
+                                            style: const TextStyle(
+                                              color: AppTheme.primaryColor,
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                        Text(
+                                          '₹${item.price.toStringAsFixed(0)}',
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w900,
+                                            color: AppTheme.primaryColor,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      item.name,
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppTheme.textPrimary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      item.description,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: AppTheme.textSecondary,
+                                        height: 1.3,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    // Add to Cart Button or quantity controller
+                                    Align(
+                                      alignment: Alignment.bottomRight,
+                                      child: inCartQty > 0
+                                          ? Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                IconButton(
+                                                  icon: const Icon(Icons.remove_circle_outline, color: AppTheme.primaryColor),
+                                                  onPressed: () => provider.removeFromCart(item.id),
+                                                  padding: EdgeInsets.zero,
+                                                  constraints: const BoxConstraints(),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Text(
+                                                  '$inCartQty',
+                                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                                ),
+                                                IconButton(
+                                                  icon: const Icon(Icons.add_circle_outline, color: AppTheme.primaryColor),
+                                                  onPressed: () => provider.addToCart(item),
+                                                  padding: EdgeInsets.zero,
+                                                  constraints: const BoxConstraints(),
+                                                ),
+                                              ],
+                                            )
+                                          : ElevatedButton(
+                                              onPressed: item.available
+                                                  ? () {
+                                                      provider.addToCart(item);
+                                                      ScaffoldMessenger.of(context).showSnackBar(
+                                                        SnackBar(
+                                                          content: Text('Added ${item.name} to cart!'),
+                                                          duration: const Duration(seconds: 1),
+                                                        ),
+                                                      );
+                                                    }
+                                                  : null,
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: AppTheme.primaryColor,
+                                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(8),
+                                                ),
+                                              ),
+                                              child: Text(
+                                                item.available ? 'Add To Cart' : 'Out Of Stock',
+                                                style: const TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold),
+                                              ),
+                                            ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                ),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
@@ -289,7 +309,7 @@ class FastFoodScreen extends StatelessWidget {
                 color: Colors.white,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 10,
                     offset: const Offset(0, -4),
                   ),

@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/fast_food_order_model.dart';
 import '../../providers/fast_food_provider.dart';
-import '../../core/services/firebase_service.dart';
+import '../../core/services/supabase_service.dart';
 import 'admin_dashboard.dart'; // To reuse VerifyFastFoodDeliveryCodeDialog
 
 class AdminFastFoodOrdersPage extends StatelessWidget {
@@ -432,16 +432,63 @@ class AdminFastFoodOrdersPage extends StatelessWidget {
                 ),
               ),
             ],
-            // --- DELIVERED ORDER TIMESTAMP ---
-            if (order.status == 'Delivered' && order.deliveredAt != null) ...[
-              const SizedBox(height: 12),
+            // --- OTP & RETENTION TIMESTAMPS ---
+            if (order.deliveryCode.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Delivery OTP: ${order.deliveryCode}',
+                      style: const TextStyle(fontWeight: FontWeight.w900, color: AppTheme.primaryColor, fontSize: 13, letterSpacing: 1.2),
+                    ),
+                    if (order.status == 'Delivered')
+                      const Text('(Verified)', style: TextStyle(fontSize: 11, color: Colors.green, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+              ),
+            ],
+            if (order.deliveredAt != null) ...[
+              const SizedBox(height: 8),
               Row(
                 children: [
                   const Icon(Icons.check_circle_outline_rounded, size: 14, color: Colors.green),
                   const SizedBox(width: 4),
                   Text(
-                    'Delivered at: ${DateFormat('dd MMM yyyy, hh:mm a').format(order.deliveredAt!)}',
-                    style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold),
+                    'Delivered: ${DateFormat('dd MMM yyyy, hh:mm a').format(order.deliveredAt!)}',
+                    style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            ],
+            if (order.rejectedAt != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Icon(Icons.cancel_outlined, size: 14, color: Colors.red),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Rejected: ${DateFormat('dd MMM yyyy, hh:mm a').format(order.rejectedAt!)}',
+                    style: const TextStyle(fontSize: 11, color: Colors.red, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            ],
+            if (order.deleteAfter != null) ...[
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  const Icon(Icons.auto_delete_outlined, size: 14, color: Colors.grey),
+                  const SizedBox(width: 4),
+                  Text(
+                    '3-Day Retention: auto-deleted on ${DateFormat('dd MMM yyyy, hh:mm a').format(order.deleteAfter!)}',
+                    style: TextStyle(fontSize: 10, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
                   ),
                 ],
               ),
@@ -476,7 +523,7 @@ class AdminFastFoodOrdersPage extends StatelessWidget {
           ),
         ),
         body: StreamBuilder<List<FastFoodOrderModel>>(
-          stream: FirebaseService().streamAllFastFoodOrders(),
+          stream: SupabaseService().streamAllFastFoodOrders(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
               return const Center(child: CircularProgressIndicator());
@@ -540,6 +587,155 @@ class AdminFastFoodOrdersPage extends StatelessWidget {
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+class VerifyFastFoodDeliveryCodeDialog extends StatefulWidget {
+  final FastFoodOrderModel order;
+  final FastFoodProvider provider;
+
+  const VerifyFastFoodDeliveryCodeDialog({
+    Key? key,
+    required this.order,
+    required this.provider,
+  }) : super(key: key);
+
+  @override
+  State<VerifyFastFoodDeliveryCodeDialog> createState() => _VerifyFastFoodDeliveryCodeDialogState();
+}
+
+class _VerifyFastFoodDeliveryCodeDialogState extends State<VerifyFastFoodDeliveryCodeDialog> {
+  final TextEditingController _codeController = TextEditingController();
+  String? _localError;
+  bool _isVerifying = false;
+
+  @override
+  void dispose() {
+    _codeController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cleanId = widget.order.orderId.replaceAll('fford_', '').toUpperCase();
+    final displayId = cleanId.substring(0, min(6, cleanId.length));
+
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: const Text(
+        'Verify Delivery Code',
+        style: TextStyle(fontWeight: FontWeight.bold),
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Customer Name: ${widget.order.customerName}',
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Order ID: #$displayId',
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _codeController,
+              keyboardType: TextInputType.number,
+              maxLength: 4,
+              decoration: InputDecoration(
+                labelText: 'Enter Delivery Code',
+                hintText: '4-digit code',
+                errorText: _localError,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                prefixIcon: const Icon(Icons.lock_outline_rounded),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isVerifying ? null : () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppTheme.primaryColor,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+          onPressed: _isVerifying ? null : _handleVerify,
+          child: _isVerifying
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                )
+              : const Text('Verify'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _handleVerify() async {
+    final code = _codeController.text.trim();
+    if (code.length != 4) {
+      setState(() {
+        _localError = 'Please enter a 4-digit delivery code.';
+      });
+      return;
+    }
+
+    setState(() {
+      _isVerifying = true;
+      _localError = null;
+    });
+
+    final success = await widget.provider.verifyFastFoodDeliveryCode(widget.order.orderId, code);
+
+    if (!mounted) return;
+
+    setState(() {
+      _isVerifying = false;
+    });
+
+    if (success) {
+      Navigator.pop(context);
+      _showSuccessPopup();
+    } else {
+      setState(() {
+        _localError = widget.provider.errorMessage ?? 'Invalid OTP. Please try again.';
+      });
+    }
+  }
+
+  void _showSuccessPopup() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.check_circle_rounded, color: Colors.green),
+            SizedBox(width: 8),
+            Text('Delivery Successful'),
+          ],
+        ),
+        content: const Text(
+          'Order delivered successfully.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('OK', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
       ),
     );
   }

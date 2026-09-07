@@ -1,4 +1,12 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+DateTime _parseDateTime(dynamic value) {
+  if (value == null) return DateTime.now();
+  if (value is DateTime) return value;
+  if (value is String) return DateTime.parse(value);
+  if (value.runtimeType.toString() == 'Timestamp') {
+    return (value as dynamic).toDate();
+  }
+  return DateTime.now();
+}
 
 class FastFoodItemModel {
   final String id;
@@ -28,13 +36,9 @@ class FastFoodItemModel {
       description: data['description'] ?? '',
       category: data['category'] ?? '',
       price: (data['price'] ?? 0.0).toDouble(),
-      imageUrl: data['imageUrl'] ?? '',
+      imageUrl: data['imageUrl'] ?? data['image_url'] ?? '',
       available: data['available'] ?? true,
-      createdAt: data['createdAt'] != null
-          ? (data['createdAt'] is Timestamp 
-              ? (data['createdAt'] as Timestamp).toDate()
-              : DateTime.parse(data['createdAt']))
-          : DateTime.now(),
+      createdAt: _parseDateTime(data['createdAt'] ?? data['created_at']),
     );
   }
 
@@ -46,7 +50,7 @@ class FastFoodItemModel {
       'price': price,
       'imageUrl': imageUrl,
       'available': available,
-      'createdAt': Timestamp.fromDate(createdAt),
+      'createdAt': createdAt.toIso8601String(),
     };
   }
 

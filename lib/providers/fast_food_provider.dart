@@ -1,14 +1,13 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/fast_food_item_model.dart';
 import '../models/fast_food_order_model.dart';
-import '../core/services/firebase_service.dart';
+import '../core/services/supabase_service.dart';
 import '../core/services/notification_service.dart';
 
 class FastFoodProvider extends ChangeNotifier {
-  final FirebaseService _db = FirebaseService();
+  final SupabaseService _db = SupabaseService();
 
   List<FastFoodItemModel> _items = [];
   List<FastFoodOrderModel> _customerOrders = [];
@@ -38,7 +37,10 @@ class FastFoodProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   Map<String, FastFoodOrderItemModel> get cart => _cart;
+  int get cartItemCount => _cart.values.fold(0, (sum, item) => sum + item.quantity);
   String get lastDeliveryCode => _lastDeliveryCode;
+  bool get isTimerRunning => _timerData['fastFoodEnabled'] == true;
+  String get formattedRemainingTime => _remainingTimeString.isNotEmpty ? _remainingTimeString : '00:00';
 
   FastFoodProvider() {
     initItemsStream();
@@ -144,16 +146,16 @@ class FastFoodProvider extends ChangeNotifier {
       String customerId = '';
       
       if (!_db.isOfflineMode) {
-        final doc = await FirebaseFirestore.instance.collection('fast_food_orders').doc(orderId).get();
-        if (!doc.exists) {
+        try {
+          final doc = await _db.client.from('fast_food_orders').select().eq('id', orderId).single();
+          storedOtp = (doc['delivery_code'] ?? doc['delivery_otp'] ?? '').toString();
+          customerId = (doc['customer_id'] ?? '').toString();
+        } catch (e) {
           _errorMessage = 'Order not found.';
           _isLoading = false;
           notifyListeners();
           return false;
         }
-        final data = doc.data() ?? {};
-        storedOtp = (data['deliveryOtp'] ?? data['deliveryCode'] ?? '').toString();
-        customerId = (data['customerId'] ?? '').toString();
       } else {
         final orderIndex = _allOrders.indexWhere((o) => o.orderId == orderId);
         if (orderIndex == -1) {
@@ -207,12 +209,10 @@ class FastFoodProvider extends ChangeNotifier {
       
       try {
         if (!_db.isOfflineMode) {
-          await FirebaseFirestore.instance.collection('fast_food_orders').doc(order.orderId).update({
-            'deliveryCode': fallbackOtp,
-            'deliveryOtp': fallbackOtp,
-            'otpVerified': false,
-            'deliveryVerified': false,
-          });
+          await _db.client.from('fast_food_orders').update({
+            'delivery_code': fallbackOtp,
+            'delivery_verified': false,
+          }).eq('id', order.orderId);
         } else {
           final idx = _allOrders.indexWhere((o) => o.orderId == order.orderId);
           if (idx != -1) {
@@ -265,8 +265,8 @@ class FastFoodProvider extends ChangeNotifier {
       final enabled = data['fastFoodEnabled'] ?? false;
       final endsAtVal = data['timerEndsAt'];
       if (enabled && endsAtVal != null) {
-        final DateTime endsAt = endsAtVal is Timestamp
-            ? endsAtVal.toDate()
+        final DateTime endsAt = endsAtVal.runtimeType.toString() == 'Timestamp'
+            ? (endsAtVal as dynamic).toDate()
             : (endsAtVal is DateTime ? endsAtVal : DateTime.tryParse(endsAtVal.toString()) ?? DateTime.now());
         _startLocalTicker(endsAt);
       } else {
@@ -311,11 +311,11 @@ class FastFoodProvider extends ChangeNotifier {
     if (!enabled || endsAtVal == null || startedAtVal == null) return;
 
     final DateTime now = DateTime.now();
-    final DateTime startedAt = startedAtVal is Timestamp
-        ? startedAtVal.toDate()
+    final DateTime startedAt = startedAtVal.runtimeType.toString() == 'Timestamp'
+        ? (startedAtVal as dynamic).toDate()
         : (startedAtVal is DateTime ? startedAtVal : DateTime.parse(startedAtVal.toString()));
-    final DateTime endsAt = endsAtVal is Timestamp
-        ? endsAtVal.toDate()
+    final DateTime endsAt = endsAtVal.runtimeType.toString() == 'Timestamp'
+        ? (endsAtVal as dynamic).toDate()
         : (endsAtVal is DateTime ? endsAtVal : DateTime.parse(endsAtVal.toString()));
 
     final duration = data['timerDuration'] ?? 0;

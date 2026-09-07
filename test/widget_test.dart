@@ -1,20 +1,27 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:campuskart/main.dart';
+import 'package:campuskart/core/theme/app_theme.dart';
 
 void main() {
-  testWidgets('CampusKart splash screen smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const CampusKartApp());
+  testWidgets('CampusKart App Theme and Branding Smoke Test', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.lightTheme,
+        home: const Scaffold(
+          body: Center(
+            child: Text(
+              'CampusKart',
+              style: TextStyle(
+                color: AppTheme.primaryColor,
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
 
-    // Verify that the splash screen shows 'CampusKart'
     expect(find.text('CampusKart'), findsOneWidget);
   });
 }

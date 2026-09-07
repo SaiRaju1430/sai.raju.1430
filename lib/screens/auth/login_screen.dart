@@ -7,9 +7,11 @@ import '../../providers/fast_food_provider.dart';
 import '../../providers/broadcast_provider.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_textfield.dart';
+import '../../widgets/responsive_container.dart';
 import 'register_screen.dart';
 import '../customer/order_type_screen.dart';
 import '../admin/admin_dashboard.dart';
+import 'complete_registration_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -69,20 +71,61 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _handleGoogleLogin() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    bool success = await auth.signInWithGoogle();
+
+    if (mounted) {
+      if (success) {
+        if (auth.isAdmin) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const AdminDashboard()),
+          );
+        } else {
+          Provider.of<OrderProvider>(context, listen: false)
+              .initCustomerStreams(auth.user!.uid);
+          Provider.of<FastFoodProvider>(context, listen: false)
+              .initCustomerOrdersStream(auth.user!.uid);
+          Provider.of<BroadcastProvider>(context, listen: false)
+              .initCustomerStreams(auth.user!.uid);
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const OrderTypeScreen()),
+          );
+        }
+      } else if (auth.tempGoogleUser != null) {
+        // Redirect to complete registration
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const CompleteRegistrationScreen()),
+        );
+      } else if (auth.errorMessage != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(auth.errorMessage!),
+            backgroundColor: Colors.red.shade600,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
 
     return Scaffold(
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 24),
+        child: ResponsiveContainer.form(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 24),
                 // Heading Block
                 const Text(
                   'Welcome Back!',
@@ -130,13 +173,34 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 36),
 
-                // Login Trigger Button
-                CustomButton(
-                  text: 'LOGIN',
-                  isLoading: auth.isLoading,
-                  onPressed: _handleLogin,
-                ),
-                const SizedBox(height: 24),
+                 // Login Trigger Button
+                 CustomButton(
+                   text: 'LOGIN',
+                   isLoading: auth.isLoading,
+                   onPressed: _handleLogin,
+                 ),
+                 const SizedBox(height: 24),
+
+                 // OR Divider
+                  const Row(
+                    children: [
+                      Expanded(child: Divider(color: Color(0xFFE0E0E0))),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16),
+                        child: Text('OR', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.bold)),
+                      ),
+                      Expanded(child: Divider(color: Color(0xFFE0E0E0))),
+                    ],
+                  ),
+                 const SizedBox(height: 24),
+
+                 // Google Sign-In Button
+                 CustomButton(
+                   text: 'CONTINUE WITH GOOGLE',
+                   isLoading: auth.isLoading,
+                   onPressed: _handleGoogleLogin,
+                 ),
+                 const SizedBox(height: 24),
 
                 // Switch To Register Link
                 Row(
@@ -158,34 +222,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 32),
-                
-                // Testing helper banner
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.shade50,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.amber.shade200),
-                  ),
-                  child: const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.info_outline_rounded, color: Colors.amber, size: 18),
-                          SizedBox(width: 8),
-                          Text('Owner/Admin Credentials:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black)),
-                        ],
-                      ),
-                      SizedBox(height: 4),
-                      Text('Mobile: 9515639193 or 9999999999 \nPassword: 123456', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
-                    ],
-                  ),
-                ),
               ],
             ),
           ),
+        ),
         ),
       ),
     );

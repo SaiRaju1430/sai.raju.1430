@@ -67,7 +67,7 @@ class _VerifyDeliveryScreenState extends State<VerifyDeliveryScreen> {
             ],
           ),
           content: const Text(
-            'Personal Request delivered successfully.\n\nThank you.',
+            'Order delivered successfully.\n\nThank you for choosing CampusKart.',
             style: TextStyle(fontSize: 14, height: 1.5),
           ),
           actions: [

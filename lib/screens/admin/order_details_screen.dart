@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/order_model.dart';
@@ -35,6 +36,127 @@ class OrderDetailsScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Order Overview & OTP Card
+            Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'ORDER #${activeOrder.id.replaceAll('ord_', '').toUpperCase()}',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: activeOrder.status == 'Delivered'
+                                ? Colors.green.shade50
+                                : (activeOrder.status == 'Rejected' ? Colors.red.shade50 : Colors.orange.shade50),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: activeOrder.status == 'Delivered'
+                                  ? Colors.green.shade200
+                                  : (activeOrder.status == 'Rejected' ? Colors.red.shade200 : Colors.orange.shade200),
+                            ),
+                          ),
+                          child: Text(
+                            activeOrder.status,
+                            style: TextStyle(
+                              color: activeOrder.status == 'Delivered'
+                                  ? Colors.green.shade800
+                                  : (activeOrder.status == 'Rejected' ? Colors.red.shade800 : Colors.orange.shade900),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    const Divider(),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Delivery OTP (Code):', style: TextStyle(fontSize: 13, color: Colors.grey, fontWeight: FontWeight.w600)),
+                        Text(
+                          activeOrder.verificationCode.isNotEmpty ? activeOrder.verificationCode : 'N/A',
+                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppTheme.primaryColor, letterSpacing: 2),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Created At:', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                        Text(
+                          DateFormat('dd MMM yyyy, hh:mm a').format(activeOrder.orderDate),
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
+                    if (activeOrder.deliveredAt != null) ...[
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Delivered At:', style: TextStyle(fontSize: 12, color: Colors.green)),
+                          Text(
+                            DateFormat('dd MMM yyyy, hh:mm a').format(activeOrder.deliveredAt!),
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.green),
+                          ),
+                        ],
+                      ),
+                    ],
+                    if (activeOrder.rejectedAt != null) ...[
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Rejected At:', style: TextStyle(fontSize: 12, color: Colors.red)),
+                          Text(
+                            DateFormat('dd MMM yyyy, hh:mm a').format(activeOrder.rejectedAt!),
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.red),
+                          ),
+                        ],
+                      ),
+                    ],
+                    if (activeOrder.deleteAfter != null) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.auto_delete_outlined, size: 14, color: Colors.grey),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                '3-Day Retention: auto-deleted on ${DateFormat('dd MMM yyyy, hh:mm a').format(activeOrder.deleteAfter!)}',
+                                style: TextStyle(fontSize: 11, color: Colors.grey.shade700, fontWeight: FontWeight.w500),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
             // Customer Contact Panel
             Card(
               elevation: 2,

@@ -1,8 +1,7 @@
 import 'dart:async';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../core/services/firebase_service.dart';
+import '../core/services/supabase_service.dart';
 import '../core/services/notification_service.dart';
 import '../models/order_model.dart';
 import '../models/personal_request_model.dart';
@@ -10,7 +9,7 @@ import '../models/fast_food_order_model.dart';
 import 'auth_provider.dart';
 
 class BroadcastProvider extends ChangeNotifier {
-  final FirebaseService _db = FirebaseService();
+  final SupabaseService _db = SupabaseService();
   String? _customerId;
   List<Map<String, dynamic>> _allBroadcasts = [];
   List<OrderModel> _customerOrders = [];
@@ -21,8 +20,8 @@ class BroadcastProvider extends ChangeNotifier {
 
   final Set<String> _notifiedBroadcastIds = {};
   final Set<String> _readBroadcastIds = {};
-  StreamSubscription<QuerySnapshot>? _broadcastsSubscription;
-  StreamSubscription<DocumentSnapshot>? _readIdsSubscription;
+  StreamSubscription? _broadcastsSubscription;
+  StreamSubscription? _readIdsSubscription;
   DateTime _streamStartTime = DateTime.now();
   StreamSubscription<List<Map<String, dynamic>>>? _notificationsSubscription;
   StreamSubscription<List<OrderModel>>? _ordersSubscription;
@@ -143,7 +142,7 @@ class BroadcastProvider extends ChangeNotifier {
 
   DateTime _parseDateTime(dynamic value) {
     if (value is DateTime) return value;
-    if (value is Timestamp) return value.toDate();
+    if (value.runtimeType.toString() == 'Timestamp') return (value as dynamic).toDate();
     if (value is String) return DateTime.tryParse(value) ?? DateTime.now();
     return DateTime.now();
   }
@@ -190,7 +189,7 @@ class BroadcastProvider extends ChangeNotifier {
     }
   }
 
-  /// Mark a single notification as read — persisted to Firestore.
+  /// Mark a single notification as read — persisted to Supabase.
   Future<void> markAsRead(String notifId) async {
     if (_customerId == null || notifId.isEmpty) return;
     
@@ -204,7 +203,7 @@ class BroadcastProvider extends ChangeNotifier {
     }
     notifyListeners();
     
-    // Persist to Firestore / mock
+    // Persist to Supabase
     await _db.markNotificationRead(notifId);
   }
 
@@ -230,7 +229,7 @@ class BroadcastProvider extends ChangeNotifier {
     }
     notifyListeners();
     
-    // Persist each to Firestore
+    // Persist each to Supabase
     for (final id in ids) {
       await _db.markNotificationRead(id);
     }

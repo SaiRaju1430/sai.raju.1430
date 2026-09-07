@@ -1,18 +1,9 @@
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'firebase_service.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
+import '../../supabase_options.dart';
+import 'supabase_service.dart';
 import '../../screens/customer/notifications_screen.dart';
-
-@pragma('vm:entry-point')
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  try {
-    await Firebase.initializeApp();
-  } catch (e) {
-    print('CampusKart: Background Firebase initialization exception: $e');
-  }
-  print('CampusKart: Handling background message: ${message.messageId}');
-}
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -23,56 +14,74 @@ class NotificationService {
   static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
   bool _initialized = false;
+  String? _currentUserId;
+
+  String _getDeviceType() {
+    if (kIsWeb) return 'web';
+    try {
+      if (defaultTargetPlatform == TargetPlatform.android) return 'android';
+      if (defaultTargetPlatform == TargetPlatform.iOS) return 'ios';
+      if (defaultTargetPlatform == TargetPlatform.macOS) return 'macos';
+      if (defaultTargetPlatform == TargetPlatform.windows) return 'windows';
+      if (defaultTargetPlatform == TargetPlatform.linux) return 'linux';
+      return 'other';
+    } catch (_) {
+      return 'web';
+    }
+  }
 
   Future<void> initialize(BuildContext context) async {
     if (_initialized) return;
-    
+
+    if (kIsWeb) {
+      // Web notification support via in-app alert banners and Supabase notification streams
+      _initialized = true;
+      return;
+    }
+
     try {
-      FirebaseMessaging messaging = FirebaseMessaging.instance;
+      if (SupabaseOptions.oneSignalAppId != 'YOUR_ONESIGNAL_APP_ID' && SupabaseOptions.oneSignalAppId.isNotEmpty) {
+        // Initialize OneSignal
+        OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
+        OneSignal.initialize(SupabaseOptions.oneSignalAppId);
+        
+        // Request permissions
+        OneSignal.Notifications.requestPermission(true);
 
-      // Register background message handler
-      FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-
-      // Request permission
-      NotificationSettings settings = await messaging.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
-
-      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-        print('CampusKart: FCM permissions granted.');
-
-        // Token fetch
-        String? token = await messaging.getToken();
-        print('CampusKart: FCM Device Token: $token');
-
-        // Handle foreground notifications
-        FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-          _showLocalNotification(message.notification?.title ?? 'Notification', message.notification?.body ?? '');
-        });
-
-        // Handle notification clicks when app is in background
-        FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-          _handleNotificationClick(message);
-        });
-
-        // Handle notification clicks when app is closed
-        messaging.getInitialMessage().then((RemoteMessage? message) {
-          if (message != null) {
-            _handleNotificationClick(message);
+        // Handle dynamic push subscription updates
+        OneSignal.User.pushSubscription.addObserver((state) {
+          final newSubId = state.current.id;
+          if (newSubId != null && newSubId.isNotEmpty && _currentUserId != null) {
+            SupabaseService().registerPushSubscription(
+              uid: _currentUserId!,
+              subscriptionId: newSubId,
+              deviceType: _getDeviceType(),
+            );
           }
         });
+
+        // Handle foreground notifications
+        OneSignal.Notifications.addForegroundWillDisplayListener((event) {
+          final title = event.notification.title ?? 'Notification';
+          final body = event.notification.body ?? '';
+          _showLocalNotification(title, body);
+        });
+
+        // Handle notification clicks
+        OneSignal.Notifications.addClickListener((event) {
+          _handleNotificationClick();
+        });
+      } else {
+        print('CampusKart: OneSignal running in simulated mode (no App ID).');
       }
       _initialized = true;
     } catch (e) {
-      print('CampusKart: Notification service running in local simulated mode.');
+      print('CampusKart: Notification service running in local simulated mode: $e');
       _initialized = true;
     }
   }
 
-  void _handleNotificationClick(RemoteMessage message) {
-    print('CampusKart: Notification clicked: ${message.messageId}');
+  void _handleNotificationClick() {
     final context = navigatorKey.currentContext;
     if (context != null) {
       Navigator.push(
@@ -83,42 +92,52 @@ class NotificationService {
   }
 
   Future<void> requestFCMPermissions() async {
+    if (kIsWeb) return;
     try {
-      FirebaseMessaging messaging = FirebaseMessaging.instance;
-      await messaging.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
+      OneSignal.Notifications.requestPermission(true);
     } catch (e) {
-      print('CampusKart: Request FCM permissions failed/offline: $e');
+      print('CampusKart: Request OneSignal permissions failed: $e');
     }
   }
 
   Future<void> setupUserFCMToken(String userId) async {
-    try {
-      FirebaseMessaging messaging = FirebaseMessaging.instance;
-      String? token = await messaging.getToken();
-      if (token != null) {
-        print('CampusKart: FCM setup for user $userId. Token: $token');
-        await FirebaseService().updateUserFCMToken(userId, token);
-        
-        // Listen to token refresh
-        messaging.onTokenRefresh.listen((newToken) {
-          FirebaseService().updateUserFCMToken(userId, newToken);
-        });
-        return;
+    _currentUserId = userId;
+    final deviceType = _getDeviceType();
+
+    if (!kIsWeb) {
+      try {
+        // Set external ID for targeting in OneSignal
+        OneSignal.login(userId);
+
+        final String? subscriptionId = OneSignal.User.pushSubscription.id;
+        if (subscriptionId != null && subscriptionId.isNotEmpty) {
+          print('CampusKart: OneSignal setup for user $userId. ID: $subscriptionId ($deviceType)');
+          await SupabaseService().registerPushSubscription(
+            uid: userId,
+            subscriptionId: subscriptionId,
+            deviceType: deviceType,
+          );
+          
+          // Tag admin users specifically in OneSignal
+          final bool isAdmin = userId == "admin123" || userId == "admin456";
+          OneSignal.User.addTagWithKey("role", isAdmin ? "admin" : "customer");
+          return;
+        }
+      } catch (e) {
+        print('CampusKart: OneSignal setup failed / offline mode: $e');
       }
-    } catch (e) {
-      print('CampusKart: FCM setup failed / offline mode: $e');
     }
-    // Mock fallback
-    final mockToken = 'mock_fcm_token_$userId';
-    await FirebaseService().updateUserFCMToken(userId, mockToken);
+
+    // Web & Mock fallback for notification stream tracking
+    final mockToken = '${deviceType}_token_$userId';
+    await SupabaseService().registerPushSubscription(
+      uid: userId,
+      subscriptionId: mockToken,
+      deviceType: deviceType,
+    );
   }
 
   /// Trigger simulated push notifications locally inside the app.
-  /// This is used both as a local fallback and to immediately show notifications.
   void showSimulatedNotification(String title, String body) {
     _showLocalNotification(title, body);
   }

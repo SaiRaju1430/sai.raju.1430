@@ -10,10 +10,22 @@ import 'providers/broadcast_provider.dart';
 import 'core/services/notification_service.dart';
 import 'screens/auth/splash_screen.dart';
 
-void main() {
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'supabase_options.dart';
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await Supabase.initialize(
+      url: SupabaseOptions.url,
+      anonKey: SupabaseOptions.anonKey,
+    );
+  } catch (e) {
+    debugPrint("Supabase initialization error: $e");
+  }
   runApp(const CampusKartApp());
 }
+
 
 class CampusKartApp extends StatelessWidget {
   const CampusKartApp({Key? key}) : super(key: key);

@@ -6,8 +6,8 @@ import '../../providers/product_provider.dart';
 import '../../providers/order_provider.dart';
 import '../../widgets/product_card.dart';
 import '../../widgets/category_card.dart';
+import '../../widgets/responsive_container.dart';
 import 'cart_screen.dart';
-
 import 'my_orders_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -91,114 +91,97 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(width: 8),
         ],
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Banner for Sunday Timings
-          Container(
-            width: double.infinity,
-            color: Colors.orange.shade50,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              children: [
-                Icon(Icons.info_outline_rounded, color: Colors.orange.shade800, size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Sunday Service: 10 AM - 12 PM & 4 PM - 1:30 AM. Outside timings, orders are paused.',
-                    style: TextStyle(fontSize: 11, color: Colors.orange.shade900, fontWeight: FontWeight.w500),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Horizontal Categories Scroll
-          const SizedBox(height: 16),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              'Categories',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color),
-            ),
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 48,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
+      body: ResponsiveContainer.wide(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Horizontal Categories Scroll
+            const SizedBox(height: 16),
+            Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: AppConstants.categories.length,
-              itemBuilder: (context, index) {
-                final cat = AppConstants.categories[index];
-                return CategoryCard(
-                  categoryName: cat,
-                  isSelected: _selectedCategory == cat,
-                  onTap: () {
-                    setState(() {
-                      _selectedCategory = cat;
-                    });
-                  },
-                );
-              },
+              child: Text(
+                'Categories',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color),
+              ),
             ),
-          ),
-
-          // Catalog Grid
-          const SizedBox(height: 18),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '$_selectedCategory Items',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color),
-                ),
-                Text(
-                  '${products.length} items',
-                  style: TextStyle(fontSize: 13, color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6)),
-                ),
-              ],
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 48,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: AppConstants.categories.length,
+                itemBuilder: (context, index) {
+                  final cat = AppConstants.categories[index];
+                  return CategoryCard(
+                    categoryName: cat,
+                    isSelected: _selectedCategory == cat,
+                    onTap: () {
+                      setState(() {
+                        _selectedCategory = cat;
+                      });
+                    },
+                  );
+                },
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
 
-          Expanded(
-            child: productProvider.isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : products.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.category_outlined, size: 48, color: Colors.grey.shade400),
-                            const SizedBox(height: 12),
-                            Text(
-                              'No products in this category yet.',
-                              style: TextStyle(color: Colors.grey.shade500),
-                            ),
-                          ],
+            // Catalog Grid
+            const SizedBox(height: 18),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '$_selectedCategory Items',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color),
+                  ),
+                  Text(
+                    '${products.length} items',
+                    style: TextStyle(fontSize: 13, color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6)),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            Expanded(
+              child: productProvider.isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : products.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.category_outlined, size: 48, color: Colors.grey.shade400),
+                              const SizedBox(height: 12),
+                              Text(
+                                'No products in this category yet.',
+                                style: TextStyle(color: Colors.grey.shade500),
+                              ),
+                            ],
+                          ),
+                        )
+                      : GridView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            childAspectRatio: 0.72,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                          ),
+                          itemCount: products.length,
+                          itemBuilder: (context, index) {
+                            return ProductCard(
+                              product: products[index],
+                              isAdmin: false,
+                            );
+                          },
                         ),
-                      )
-                    : GridView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          childAspectRatio: 0.72,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                        ),
-                        itemCount: products.length,
-                        itemBuilder: (context, index) {
-                          return ProductCard(
-                            product: products[index],
-                            isAdmin: false,
-                          );
-                        },
-                      ),
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
 
