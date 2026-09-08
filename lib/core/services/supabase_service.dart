@@ -61,46 +61,12 @@ class SupabaseService {
   Future<User?> signInWithGoogle() async {
     try {
       if (kIsWeb) {
-        // Attempt native Web Google Sign-In first
-        try {
-          final GoogleSignIn googleSignIn = GoogleSignIn(
-            clientId: SupabaseOptions.webClientId,
-            serverClientId: SupabaseOptions.webClientId,
-            scopes: ['email', 'openid', 'profile'],
-          );
-
-          try {
-            await googleSignIn.signOut();
-          } catch (_) {}
-
-          final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
-          if (googleUser != null) {
-            final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-            final String? idToken = googleAuth.idToken;
-            final String? accessToken = googleAuth.accessToken;
-
-            if (idToken != null) {
-              final AuthResponse res = await client.auth.signInWithIdToken(
-                provider: OAuthProvider.google,
-                idToken: idToken,
-                accessToken: accessToken,
-              );
-              return res.user;
-            }
-          } else {
-            // User cancelled picker intentionally
-            return null;
-          }
-        } catch (webErr) {
-          debugPrint("CampusKart: Native Web GoogleSignIn error ($webErr). Launching Supabase OAuth redirect...");
-        }
-
-        // Web OAuth redirect fallback (100% reliable across all browsers)
+        // Direct Web OAuth Redirect: Zero People API dependency, 100% reliable on all mobile & desktop browsers
         final String currentUrl = Uri.base.origin + (Uri.base.path.isEmpty ? '/' : Uri.base.path);
+        debugPrint("CampusKart: Initiating Google OAuth redirect to: $currentUrl");
         await client.auth.signInWithOAuth(
           OAuthProvider.google,
           redirectTo: currentUrl,
-          authScreenLaunchMode: LaunchMode.platformDefault,
         );
         return client.auth.currentUser;
       } else {
