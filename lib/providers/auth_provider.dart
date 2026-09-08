@@ -42,12 +42,23 @@ class AuthProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      _user = await _db.getCurrentUser();
-      if (_user != null) {
-        await NotificationService().setupUserFCMToken(_user!.uid);
+      final sbUser = _db.client.auth.currentUser;
+      if (sbUser != null) {
+        _user = await _db.getCurrentUser();
+        if (_user != null) {
+          await NotificationService().setupUserFCMToken(_user!.uid);
+          _tempGoogleUser = null;
+        } else {
+          // Returning from Google OAuth redirect, needs profile completion
+          _tempGoogleUser = sbUser;
+        }
+      } else {
+        _user = null;
+        _tempGoogleUser = null;
       }
     } catch (e) {
       _user = null;
+      _tempGoogleUser = null;
     } finally {
       _isLoading = false;
       notifyListeners();

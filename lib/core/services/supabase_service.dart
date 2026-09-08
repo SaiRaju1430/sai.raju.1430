@@ -60,38 +60,81 @@ class SupabaseService {
 
   Future<User?> signInWithGoogle() async {
     try {
-      final GoogleSignIn googleSignIn = GoogleSignIn(
-        clientId: kIsWeb ? SupabaseOptions.webClientId : null,
-        serverClientId: SupabaseOptions.webClientId,
-        scopes: ['email', 'openid'],
-      );
-      
-      // Clear previously cached Google account session so Google account picker always opens
-      try {
-        await googleSignIn.signOut();
-      } catch (_) {}
+      if (kIsWeb) {
+        // Attempt native Web Google Sign-In first
+        try {
+          final GoogleSignIn googleSignIn = GoogleSignIn(
+            clientId: SupabaseOptions.webClientId,
+            serverClientId: SupabaseOptions.webClientId,
+            scopes: ['email', 'openid', 'profile'],
+          );
 
-      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
-      if (googleUser == null) {
-        // User cancelled picker
-        return null;
+          try {
+            await googleSignIn.signOut();
+          } catch (_) {}
+
+          final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+          if (googleUser != null) {
+            final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+            final String? idToken = googleAuth.idToken;
+            final String? accessToken = googleAuth.accessToken;
+
+            if (idToken != null) {
+              final AuthResponse res = await client.auth.signInWithIdToken(
+                provider: OAuthProvider.google,
+                idToken: idToken,
+                accessToken: accessToken,
+              );
+              return res.user;
+            }
+          } else {
+            // User cancelled picker intentionally
+            return null;
+          }
+        } catch (webErr) {
+          debugPrint("CampusKart: Native Web GoogleSignIn error ($webErr). Launching Supabase OAuth redirect...");
+        }
+
+        // Web OAuth redirect fallback (100% reliable across all browsers)
+        final String currentUrl = Uri.base.origin + (Uri.base.path.isEmpty ? '/' : Uri.base.path);
+        await client.auth.signInWithOAuth(
+          OAuthProvider.google,
+          redirectTo: currentUrl,
+          authScreenLaunchMode: LaunchMode.platformDefault,
+        );
+        return client.auth.currentUser;
+      } else {
+        // Mobile platform (Android/iOS)
+        final GoogleSignIn googleSignIn = GoogleSignIn(
+          serverClientId: SupabaseOptions.webClientId,
+          scopes: ['email', 'openid'],
+        );
+
+        try {
+          await googleSignIn.signOut();
+        } catch (_) {}
+
+        final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+        if (googleUser == null) {
+          return null;
+        }
+
+        final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+        final String? idToken = googleAuth.idToken;
+        final String? accessToken = googleAuth.accessToken;
+
+        if (idToken == null) {
+          throw Exception("Google Sign-In failed: No ID Token received.");
+        }
+
+        final AuthResponse res = await client.auth.signInWithIdToken(
+          provider: OAuthProvider.google,
+          idToken: idToken,
+          accessToken: accessToken,
+        );
+
+        return res.user;
       }
-
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      final String? idToken = googleAuth.idToken;
-      final String? accessToken = googleAuth.accessToken;
-
-      if (idToken == null) {
-        throw Exception("Google Sign-In failed: No ID Token received.");
-      }
-
-      final AuthResponse res = await client.auth.signInWithIdToken(
-        provider: OAuthProvider.google,
-        idToken: idToken,
-        accessToken: accessToken,
-      );
-
-      return res.user;
     } catch (e) {
       debugPrint("CampusKart: Google Sign-In error: $e");
       final str = e.toString();

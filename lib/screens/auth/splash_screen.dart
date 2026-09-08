@@ -8,6 +8,7 @@ import '../../providers/order_provider.dart';
 import '../../providers/fast_food_provider.dart';
 import '../../providers/broadcast_provider.dart';
 import 'login_screen.dart';
+import 'complete_registration_screen.dart';
 import '../customer/order_type_screen.dart';
 import '../admin/admin_dashboard.dart';
 
@@ -73,6 +74,11 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
               MaterialPageRoute(builder: (_) => const OrderTypeScreen()),
             );
           }
+        } else if (auth.tempGoogleUser != null) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const CompleteRegistrationScreen()),
+          );
         } else {
           Navigator.pushReplacement(
             context,
