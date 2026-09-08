@@ -60,47 +60,36 @@ class SupabaseService {
 
   Future<User?> signInWithGoogle() async {
     try {
-      if (kIsWeb) {
-        // Direct Web OAuth Redirect: Zero People API dependency, 100% reliable on all mobile & desktop browsers
-        final String currentUrl = Uri.base.origin + (Uri.base.path.isEmpty ? '/' : Uri.base.path);
-        debugPrint("CampusKart: Initiating Google OAuth redirect to: $currentUrl");
-        await client.auth.signInWithOAuth(
-          OAuthProvider.google,
-          redirectTo: currentUrl,
-        );
-        return client.auth.currentUser;
-      } else {
-        // Mobile platform (Android/iOS)
-        final GoogleSignIn googleSignIn = GoogleSignIn(
-          serverClientId: SupabaseOptions.webClientId,
-          scopes: ['email', 'openid'],
-        );
+      final GoogleSignIn googleSignIn = GoogleSignIn(
+        clientId: kIsWeb ? SupabaseOptions.webClientId : null,
+        serverClientId: SupabaseOptions.webClientId,
+        scopes: ['email', 'openid', 'profile'],
+      );
 
-        try {
-          await googleSignIn.signOut();
-        } catch (_) {}
+      try {
+        await googleSignIn.signOut();
+      } catch (_) {}
 
-        final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
-        if (googleUser == null) {
-          return null;
-        }
-
-        final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-        final String? idToken = googleAuth.idToken;
-        final String? accessToken = googleAuth.accessToken;
-
-        if (idToken == null) {
-          throw Exception("Google Sign-In failed: No ID Token received.");
-        }
-
-        final AuthResponse res = await client.auth.signInWithIdToken(
-          provider: OAuthProvider.google,
-          idToken: idToken,
-          accessToken: accessToken,
-        );
-
-        return res.user;
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+      if (googleUser == null) {
+        return null;
       }
+
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final String? idToken = googleAuth.idToken;
+      final String? accessToken = googleAuth.accessToken;
+
+      if (idToken == null) {
+        throw Exception("Google Sign-In failed: No ID Token received.");
+      }
+
+      final AuthResponse res = await client.auth.signInWithIdToken(
+        provider: OAuthProvider.google,
+        idToken: idToken,
+        accessToken: accessToken,
+      );
+
+      return res.user;
     } catch (e) {
       debugPrint("CampusKart: Google Sign-In error: $e");
       final str = e.toString();
