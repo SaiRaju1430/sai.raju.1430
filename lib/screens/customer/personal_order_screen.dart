@@ -7,7 +7,7 @@ import '../../widgets/custom_textfield.dart';
 import 'order_success_screen.dart';
 
 class PersonalOrderScreen extends StatefulWidget {
-  const PersonalOrderScreen({Key? key}) : super(key: key);
+  const PersonalOrderScreen({super.key});
 
   @override
   State<PersonalOrderScreen> createState() => _PersonalOrderScreenState();
@@ -88,7 +88,7 @@ class _PersonalOrderScreenState extends State<PersonalOrderScreen> {
                 const SizedBox(height: 6),
                 Text(
                   'Need something specific? Describe the items you need and our delivery person will bring it directly to your room.',
-                  style: TextStyle(fontSize: 13, color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7), height: 1.4),
+                  style: TextStyle(fontSize: 13, color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7), height: 1.4),
                 ),
                 const SizedBox(height: 32),
 

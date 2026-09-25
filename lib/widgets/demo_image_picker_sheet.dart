@@ -9,11 +9,11 @@ class DemoImagePickerSheet extends StatefulWidget {
   final String? currentSelectedPath;
 
   const DemoImagePickerSheet({
-    Key? key,
+    super.key,
     required this.items,
     this.title = 'Choose Demo Image',
     this.currentSelectedPath,
-  }) : super(key: key);
+  });
 
   static Future<DemoImageItem?> show(
     BuildContext context, {
@@ -224,8 +224,8 @@ class _DemoImagePickerSheetState extends State<DemoImagePickerSheet> {
                             boxShadow: [
                               BoxShadow(
                                 color: isSelected
-                                    ? AppTheme.primaryColor.withOpacity(0.2)
-                                    : Colors.black.withOpacity(0.04),
+                                    ? AppTheme.primaryColor.withValues(alpha: 0.2)
+                                    : Colors.black.withValues(alpha: 0.04),
                                 blurRadius: 6,
                                 offset: const Offset(0, 2),
                               ),

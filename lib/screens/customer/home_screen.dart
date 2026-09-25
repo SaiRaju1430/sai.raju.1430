@@ -9,9 +9,10 @@ import '../../widgets/category_card.dart';
 import '../../widgets/responsive_container.dart';
 import 'cart_screen.dart';
 import 'my_orders_screen.dart';
+import 'product_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -139,7 +140,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   Text(
                     '${products.length} items',
-                    style: TextStyle(fontSize: 13, color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6)),
+                    style: TextStyle(fontSize: 13, color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.6)),
                   ),
                 ],
               ),
@@ -173,9 +174,18 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           itemCount: products.length,
                           itemBuilder: (context, index) {
+                            final prod = products[index];
                             return ProductCard(
-                              product: products[index],
+                              product: prod,
                               isAdmin: false,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ProductDetailScreen(product: prod),
+                                  ),
+                                );
+                              },
                             );
                           },
                         ),
@@ -206,7 +216,7 @@ class _HomeScreenState extends State<HomeScreen> {
           // Transparent Overlay Banner
           Positioned.fill(
             child: Container(
-              color: Colors.black.withOpacity(0.35),
+              color: Colors.black.withValues(alpha: 0.35),
               alignment: Alignment.center,
               child: Card(
                 elevation: 12,
@@ -245,7 +255,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 13,
-                          color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7),
+                          color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
                           height: 1.4,
                         ),
                       ),

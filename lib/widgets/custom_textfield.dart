@@ -10,9 +10,10 @@ class CustomTextField extends StatefulWidget {
   final IconData? prefixIcon;
   final String? Function(String?)? validator;
   final int maxLines;
+  final ValueChanged<String>? onChanged;
 
   const CustomTextField({
-    Key? key,
+    super.key,
     required this.label,
     required this.hint,
     required this.controller,
@@ -21,7 +22,8 @@ class CustomTextField extends StatefulWidget {
     this.prefixIcon,
     this.validator,
     this.maxLines = 1,
-  }) : super(key: key);
+    this.onChanged,
+  });
 
   @override
   State<CustomTextField> createState() => _CustomTextFieldState();
@@ -50,6 +52,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
           obscureText: widget.isPassword ? _obscureText : false,
           maxLines: widget.maxLines,
           validator: widget.validator,
+          onChanged: widget.onChanged,
           style: const TextStyle(fontSize: 15, color: AppTheme.textPrimary),
           decoration: InputDecoration(
             hintText: widget.hint,

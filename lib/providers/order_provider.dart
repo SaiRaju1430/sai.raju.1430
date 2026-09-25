@@ -95,7 +95,7 @@ class OrderProvider extends ChangeNotifier {
 
           if (req.status == 'Delivered') {
             final navContext = NotificationService.navigatorKey.currentContext;
-            if (navContext != null) {
+            if (navContext != null && navContext.mounted) {
               showDialog(
                 context: navContext,
                 barrierDismissible: false,
@@ -150,7 +150,7 @@ class OrderProvider extends ChangeNotifier {
           productId: product.id,
           productName: product.name,
           quantity: newQty,
-          price: product.price,
+          price: product.effectivePrice,
           imageUrl: product.imageUrl,
           unit: product.unit,
         );
@@ -161,7 +161,7 @@ class OrderProvider extends ChangeNotifier {
           productId: product.id,
           productName: product.name,
           quantity: 1,
-          price: product.price,
+          price: product.effectivePrice,
           imageUrl: product.imageUrl,
           unit: product.unit,
         );
@@ -179,7 +179,7 @@ class OrderProvider extends ChangeNotifier {
           productId: product.id,
           productName: product.name,
           quantity: quantity,
-          price: product.price,
+          price: product.effectivePrice,
           imageUrl: product.imageUrl,
           unit: product.unit,
         );

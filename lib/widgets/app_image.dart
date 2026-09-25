@@ -11,7 +11,7 @@ class AppImage extends StatelessWidget {
   final double iconSize;
 
   const AppImage({
-    Key? key,
+    super.key,
     required this.imageUrl,
     this.width,
     this.height,
@@ -20,7 +20,7 @@ class AppImage extends StatelessWidget {
     this.fallbackIcon = Icons.fastfood_rounded,
     this.backgroundColor,
     this.iconSize = 32,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

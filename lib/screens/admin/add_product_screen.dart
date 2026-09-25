@@ -14,7 +14,7 @@ import '../../widgets/app_image.dart';
 import '../../widgets/demo_image_picker_sheet.dart';
 
 class AddProductScreen extends StatefulWidget {
-  const AddProductScreen({Key? key}) : super(key: key);
+  const AddProductScreen({super.key});
 
   @override
   State<AddProductScreen> createState() => _AddProductScreenState();
@@ -28,9 +28,12 @@ class _AddProductScreenState extends State<AddProductScreen> {
   final _qtyController = TextEditingController();
   final _imageController = TextEditingController();
   final _descController = TextEditingController();
+  final _offerLabelController = TextEditingController(text: 'OFFER');
+  final _offerPriceController = TextEditingController();
 
   String _selectedCategory = AppConstants.categories.first;
   String _selectedUnit = 'kg';
+  bool _isOffer = false;
   bool _notifyCustomers = true;
   bool _notifyCustomersInitialized = false;
 
@@ -63,6 +66,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
     _qtyController.dispose();
     _imageController.dispose();
     _descController.dispose();
+    _offerLabelController.dispose();
+    _offerPriceController.dispose();
     super.dispose();
   }
 
@@ -111,7 +116,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
       final Uint8List bytes = await pickedFile.readAsBytes();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final fileExtension = pickedFile.name.split('.').last.toLowerCase();
-      final path = 'products/prod_${timestamp}.$fileExtension';
+      final path = 'products/prod_$timestamp.$fileExtension';
 
       final publicUrl = await SupabaseService().uploadImageBytes(
         bucketName: 'product-images',
@@ -150,18 +155,13 @@ class _AddProductScreenState extends State<AddProductScreen> {
   }
 
   Future<void> _handleSubmit() async {
-    if (_selectedImageUrl.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select or upload a product image.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
     if (_formKey.currentState!.validate()) {
       final productProvider = Provider.of<ProductProvider>(context, listen: false);
+
+      double? offerPrice;
+      if (_isOffer && _offerPriceController.text.trim().isNotEmpty) {
+        offerPrice = double.tryParse(_offerPriceController.text.trim());
+      }
 
       bool success = await productProvider.addProduct(
         name: _nameController.text.trim(),
@@ -171,6 +171,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
         imageUrl: _selectedImageUrl.trim(),
         description: _descController.text.trim(),
         unit: _selectedUnit,
+        isOffer: _isOffer,
+        offerLabel: _offerLabelController.text.trim().isEmpty ? 'OFFER' : _offerLabelController.text.trim(),
+        offerPrice: offerPrice,
         notifyCustomers: _notifyCustomers,
       );
 
@@ -181,7 +184,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
         Navigator.pop(context);
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(productProvider.errorMessage ?? 'Failed to add product.')),
+          SnackBar(
+            content: Text(productProvider.errorMessage ?? 'Unable to add product. Please check your connection or admin permissions.'),
+            backgroundColor: Colors.red.shade600,
+          ),
         );
       }
     }
@@ -219,7 +225,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 const SizedBox(height: 6),
                 Text(
                   'Add a new product item with descriptions, demo/custom images, and units.',
-                  style: TextStyle(fontSize: 12, color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7)),
+                  style: TextStyle(fontSize: 12, color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7)),
                 ),
                 const SizedBox(height: 28),
 
@@ -280,7 +286,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryColor.withOpacity(0.06),
+                          color: AppTheme.primaryColor.withValues(alpha: 0.06),
                           borderRadius: const BorderRadius.vertical(bottom: Radius.circular(15)),
                         ),
                         child: Row(
@@ -382,7 +388,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           ),
                           const SizedBox(height: 6),
                           DropdownButtonFormField<String>(
-                            value: _selectedCategory,
+                            initialValue: _selectedCategory,
                             decoration: const InputDecoration(
                               contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                             ),
@@ -423,7 +429,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           ),
                           const SizedBox(height: 6),
                           DropdownButtonFormField<String>(
-                            value: _selectedUnit,
+                            initialValue: _selectedUnit,
                             decoration: const InputDecoration(
                               contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                             ),
@@ -497,6 +503,138 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 20),
+
+                // ========================================================
+                // --- SPECIAL OFFER & HIGHLIGHT SETTINGS ---
+                // ========================================================
+                Container(
+                  decoration: BoxDecoration(
+                    color: _isOffer ? Colors.orange.shade50.withValues(alpha: 0.5) : Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: _isOffer ? Colors.orange.shade300 : Colors.grey.shade300,
+                      width: _isOffer ? 1.5 : 1.0,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SwitchListTile(
+                        activeThumbColor: Colors.orange.shade700,
+                        activeTrackColor: Colors.orange.shade200,
+                        secondary: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: _isOffer ? Colors.orange.shade100 : Colors.grey.shade200,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.local_fire_department_rounded,
+                            color: _isOffer ? Colors.orange.shade700 : Colors.grey.shade600,
+                            size: 22,
+                          ),
+                        ),
+                        title: const Text(
+                          'Offer Item',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                        ),
+                        subtitle: Text(
+                          _isOffer
+                              ? 'Highlighted with an eye-catching OFFER badge on customer screens.'
+                              : 'Toggle ON to mark and highlight this product as a special offer.',
+                          style: TextStyle(fontSize: 12, color: _isOffer ? Colors.orange.shade900 : AppTheme.textSecondary),
+                        ),
+                        value: _isOffer,
+                        onChanged: (val) {
+                          setState(() {
+                            _isOffer = val;
+                          });
+                        },
+                      ),
+                      if (_isOffer) ...[
+                        const Divider(height: 1),
+                        Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Live Badge Preview
+                              Row(
+                                children: [
+                                  const Text(
+                                    'Badge Preview:',
+                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.textSecondary),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: [Colors.orange.shade700, Colors.deepOrange.shade600],
+                                      ),
+                                      borderRadius: BorderRadius.circular(20),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.deepOrange.withValues(alpha: 0.3),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Text('🔥 ', style: TextStyle(fontSize: 11)),
+                                        Text(
+                                          (_offerLabelController.text.trim().isEmpty ? 'OFFER' : _offerLabelController.text.trim()).toUpperCase(),
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w900,
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 14),
+
+                              // Offer badge text input
+                              CustomTextField(
+                                label: 'Offer Title / Badge Text (Optional)',
+                                hint: 'e.g. OFFER, HOT DEAL, 20% OFF',
+                                controller: _offerLabelController,
+                                prefixIcon: Icons.discount_rounded,
+                                onChanged: (val) => setState(() {}),
+                              ),
+                              const SizedBox(height: 14),
+
+                              // Optional Offer Price input
+                              CustomTextField(
+                                label: 'Offer Price (₹) (Optional)',
+                                hint: 'e.g. Discounted price (leave empty to keep regular price)',
+                                controller: _offerPriceController,
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                prefixIcon: Icons.sell_rounded,
+                                validator: (val) {
+                                  if (val != null && val.trim().isNotEmpty) {
+                                    final parsed = double.tryParse(val.trim());
+                                    if (parsed == null) return 'Invalid number.';
+                                    if (parsed <= 0) return 'Offer price must be > 0.';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 20),
 

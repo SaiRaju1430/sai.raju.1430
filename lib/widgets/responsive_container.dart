@@ -9,30 +9,30 @@ class ResponsiveContainer extends StatelessWidget {
   final AlignmentGeometry alignment;
 
   const ResponsiveContainer({
-    Key? key,
+    super.key,
     required this.child,
     this.maxWidth = 1200.0,
     this.padding,
     this.alignment = Alignment.topCenter,
-  }) : super(key: key);
+  });
 
   /// Convenient preset for authentication, forms, and dialog-like cards
   const ResponsiveContainer.form({
-    Key? key,
+    super.key,
     required this.child,
     this.maxWidth = 520.0,
     this.padding,
     this.alignment = Alignment.center,
-  }) : super(key: key);
+  });
 
   /// Convenient preset for dashboards and wide grids
   const ResponsiveContainer.wide({
-    Key? key,
+    super.key,
     required this.child,
     this.maxWidth = 1280.0,
     this.padding,
     this.alignment = Alignment.topCenter,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

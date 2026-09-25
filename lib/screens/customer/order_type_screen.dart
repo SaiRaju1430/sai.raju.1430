@@ -13,7 +13,7 @@ import 'fast_food_screen.dart';
 import 'notifications_screen.dart';
 
 class OrderTypeScreen extends StatelessWidget {
-  const OrderTypeScreen({Key? key}) : super(key: key);
+  const OrderTypeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +24,7 @@ class OrderTypeScreen extends StatelessWidget {
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [Colors.white, Colors.orange.shade50.withOpacity(0.4)],
+            colors: [Colors.white, Colors.orange.shade50.withValues(alpha: 0.4)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -74,7 +74,7 @@ class OrderTypeScreen extends StatelessWidget {
                                 IconButton(
                                   icon: const Icon(Icons.notifications_outlined, color: AppTheme.primaryColor),
                                   style: IconButton.styleFrom(
-                                    backgroundColor: AppTheme.primaryColor.withOpacity(0.08),
+                                    backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.08),
                                   ),
                                   onPressed: () {
                                     Navigator.push(
@@ -271,13 +271,13 @@ class PortalCard extends StatelessWidget {
   final VoidCallback onTap;
 
   const PortalCard({
-    Key? key,
+    super.key,
     required this.title,
     required this.subtitle,
     required this.icon,
     required this.color,
     required this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -285,17 +285,17 @@ class PortalCard extends StatelessWidget {
       onTap: onTap,
       child: Card(
         elevation: 6,
-        shadowColor: color.withOpacity(0.15),
+        shadowColor: color.withValues(alpha: 0.15),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
             gradient: LinearGradient(
-              colors: [Colors.white, color.withOpacity(0.03)],
+              colors: [Colors.white, color.withValues(alpha: 0.03)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            border: Border.all(color: color.withOpacity(0.12), width: 1),
+            border: Border.all(color: color.withValues(alpha: 0.12), width: 1),
           ),
           padding: const EdgeInsets.all(24),
           child: Row(
@@ -303,7 +303,7 @@ class PortalCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.12),
+                  color: color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Icon(icon, color: color, size: 36),

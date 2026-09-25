@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/product_provider.dart';
 import '../../widgets/product_card.dart';
+import 'product_detail_screen.dart';
 
 class CategoryScreen extends StatelessWidget {
   final String category;
 
-  const CategoryScreen({Key? key, required this.category}) : super(key: key);
+  const CategoryScreen({super.key, required this.category});
 
   @override
   Widget build(BuildContext context) {
@@ -45,9 +46,18 @@ class CategoryScreen extends StatelessWidget {
               ),
               itemCount: products.length,
               itemBuilder: (context, index) {
+                final prod = products[index];
                 return ProductCard(
-                  product: products[index],
+                  product: prod,
                   isAdmin: false,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ProductDetailScreen(product: prod),
+                      ),
+                    );
+                  },
                 );
               },
             ),

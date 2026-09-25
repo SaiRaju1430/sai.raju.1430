@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../providers/fast_food_provider.dart';
-import '../../models/fast_food_item_model.dart';
 import '../../widgets/app_image.dart';
 import 'fast_food_cart_screen.dart';
 
 class FastFoodScreen extends StatelessWidget {
-  const FastFoodScreen({Key? key}) : super(key: key);
+  const FastFoodScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

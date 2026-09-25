@@ -16,8 +16,10 @@ import 'supabase_options.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
+    // ignore: deprecated_member_use
     await Supabase.initialize(
       url: SupabaseOptions.url,
+      // ignore: deprecated_member_use
       anonKey: SupabaseOptions.anonKey,
     );
   } catch (e) {
@@ -28,7 +30,7 @@ void main() async {
 
 
 class CampusKartApp extends StatelessWidget {
-  const CampusKartApp({Key? key}) : super(key: key);
+  const CampusKartApp({super.key});
 
   @override
   Widget build(BuildContext context) {

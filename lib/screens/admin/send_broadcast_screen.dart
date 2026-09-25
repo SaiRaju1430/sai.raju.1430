@@ -15,11 +15,11 @@ class SendBroadcastScreen extends StatefulWidget {
   final String? targetCustomerMobile;
 
   const SendBroadcastScreen({
-    Key? key,
+    super.key,
     this.targetCustomerId,
     this.targetCustomerName,
     this.targetCustomerMobile,
-  }) : super(key: key);
+  });
 
   @override
   State<SendBroadcastScreen> createState() => _SendBroadcastScreenState();
@@ -86,7 +86,7 @@ class _SendBroadcastScreenState extends State<SendBroadcastScreen> {
         }
       });
     } catch (e) {
-      print('Failed to load users: $e');
+      debugPrint('Failed to load users: $e');
     } finally {
       setState(() => _loadingUsers = false);
     }
@@ -308,33 +308,31 @@ class _SendBroadcastScreenState extends State<SendBroadcastScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: RadioListTile<String>(
-                          title: const Text('All Users', style: TextStyle(fontSize: 14)),
-                          value: 'all',
-                          groupValue: _targetType,
-                          activeColor: AppTheme.primaryColor,
-                          contentPadding: EdgeInsets.zero,
-                          onChanged: (val) {
-                            setState(() => _targetType = val!);
-                          },
+                  RadioGroup<String>(
+                    groupValue: _targetType,
+                    onChanged: (val) {
+                      if (val != null) setState(() => _targetType = val);
+                    },
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: RadioListTile<String>(
+                            title: const Text('All Users', style: TextStyle(fontSize: 14)),
+                            value: 'all',
+                            activeColor: AppTheme.primaryColor,
+                            contentPadding: EdgeInsets.zero,
+                          ),
                         ),
-                      ),
-                      Expanded(
-                        child: RadioListTile<String>(
-                          title: const Text('Specific User', style: TextStyle(fontSize: 14)),
-                          value: 'specific',
-                          groupValue: _targetType,
-                          activeColor: AppTheme.primaryColor,
-                          contentPadding: EdgeInsets.zero,
-                          onChanged: (val) {
-                            setState(() => _targetType = val!);
-                          },
+                        Expanded(
+                          child: RadioListTile<String>(
+                            title: const Text('Specific User', style: TextStyle(fontSize: 14)),
+                            value: 'specific',
+                            activeColor: AppTheme.primaryColor,
+                            contentPadding: EdgeInsets.zero,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 16),
                   if (_targetType == 'specific') ...[
@@ -394,7 +392,7 @@ class _SendBroadcastScreenState extends State<SendBroadcastScreen> {
                     return ChoiceChip(
                       label: Text(temp['label']!),
                       selected: isSelected,
-                      selectedColor: AppTheme.primaryColor.withOpacity(0.15),
+                      selectedColor: AppTheme.primaryColor.withValues(alpha: 0.15),
                       labelStyle: TextStyle(
                         color: isSelected ? AppTheme.primaryColor : AppTheme.textSecondary,
                         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,

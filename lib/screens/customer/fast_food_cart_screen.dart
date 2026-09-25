@@ -5,10 +5,10 @@ import '../../providers/auth_provider.dart';
 import '../../providers/fast_food_provider.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_textfield.dart';
-import 'payment_screen.dart'; // To reuse QRPainter
+import '../../widgets/dynamic_upi_qr_widget.dart';
 
 class FastFoodCartScreen extends StatefulWidget {
-  const FastFoodCartScreen({Key? key}) : super(key: key);
+  const FastFoodCartScreen({super.key});
 
   @override
   State<FastFoodCartScreen> createState() => _FastFoodCartScreenState();
@@ -72,6 +72,16 @@ class _FastFoodCartScreenState extends State<FastFoodCartScreen> {
               child: const Text('OK', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
+        ),
+      );
+      return;
+    }
+
+    if (provider.cartTotal <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Cart is empty. Please add items to proceed.'),
+          backgroundColor: Colors.red.shade600,
         ),
       );
       return;
@@ -265,33 +275,31 @@ class _FastFoodCartScreenState extends State<FastFoodCartScreen> {
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
                     ),
                     const SizedBox(height: 12),
-                    Card(
-                      elevation: 1,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      child: Column(
-                        children: [
-                          RadioListTile<String>(
-                            title: const Text('Online Payment', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                            subtitle: const Text('Scan QR and pay via UPI', style: TextStyle(fontSize: 11)),
-                            value: 'Online',
-                            groupValue: provider.paymentMethod,
-                            activeColor: AppTheme.primaryColor,
-                            onChanged: (val) {
-                              if (val != null) provider.paymentMethod = val;
-                            },
-                          ),
-                          const Divider(height: 1),
-                          RadioListTile<String>(
-                            title: const Text('Cash On Delivery (COD)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                            subtitle: const Text('Pay with cash or UPI at delivery', style: TextStyle(fontSize: 11)),
-                            value: 'COD',
-                            groupValue: provider.paymentMethod,
-                            activeColor: AppTheme.primaryColor,
-                            onChanged: (val) {
-                              if (val != null) provider.paymentMethod = val;
-                            },
-                          ),
-                        ],
+                    RadioGroup<String>(
+                      groupValue: provider.paymentMethod,
+                      onChanged: (val) {
+                        if (val != null) provider.paymentMethod = val;
+                      },
+                      child: Card(
+                        elevation: 1,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        child: const Column(
+                          children: [
+                            RadioListTile<String>(
+                              title: Text('Online Payment', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                              subtitle: Text('Scan QR and pay via UPI', style: TextStyle(fontSize: 11)),
+                              value: 'Online',
+                              activeColor: AppTheme.primaryColor,
+                            ),
+                            Divider(height: 1),
+                            RadioListTile<String>(
+                              title: Text('Cash On Delivery (COD)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                              subtitle: Text('Pay with cash or UPI at delivery', style: TextStyle(fontSize: 11)),
+                              value: 'COD',
+                              activeColor: AppTheme.primaryColor,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     if (provider.paymentMethod == 'COD') ...[
@@ -324,56 +332,15 @@ class _FastFoodCartScreenState extends State<FastFoodCartScreen> {
                       Center(
                         child: Column(
                           children: [
-                            const Text(
-                              'Scan QR to Pay via UPI',
-                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                            DynamicUpiQrWidget(
+                              amount: provider.cartTotal,
+                              transactionNote: 'CampusKart Fast Food',
+                              qrSize: 150,
+                              showAmountHeader: true,
+                              showScanPrompt: true,
+                              showUpiDetails: true,
                             ),
-                            const SizedBox(height: 8),
-                            Container(
-                              width: 160,
-                              height: 160,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.grey.shade300),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.06),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              padding: const EdgeInsets.all(8),
-                              child: CustomPaint(
-                                painter: QRPainter(),
-                                child: Center(
-                                  child: Container(
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: const Icon(Icons.qr_code_scanner_rounded, color: AppTheme.primaryColor, size: 24),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'UPI ID: campuskart@upi',
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Amount: ₹${provider.cartTotal.toStringAsFixed(0)}',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w800,
-                                color: AppTheme.primaryColor,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 14),
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
@@ -387,7 +354,7 @@ class _FastFoodCartScreenState extends State<FastFoodCartScreen> {
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
-                                      'After completing payment, tap "I Have Paid" below. No transaction ID required.',
+                                      'After completing payment of ₹${provider.cartTotal.toStringAsFixed(0)}, tap "I HAVE PAID" below.',
                                       style: TextStyle(fontSize: 12, color: Colors.blue.shade800, fontWeight: FontWeight.w500),
                                     ),
                                   ),
@@ -511,9 +478,9 @@ class _OrderSuccessDialog extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withOpacity(0.05),
+                color: AppTheme.primaryColor.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppTheme.primaryColor.withOpacity(0.2)),
+                border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.2)),
               ),
               child: Text(
                 deliveryCode,

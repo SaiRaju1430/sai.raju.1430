@@ -13,7 +13,7 @@ import '../customer/order_type_screen.dart';
 import '../admin/admin_dashboard.dart';
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({Key? key}) : super(key: key);
+  const SplashScreen({super.key});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -43,49 +43,51 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     // 1. Initialize Supabase/Mock service
     await SupabaseService().initialize();
     
-    if (mounted) {
-      // Initialize notification service
-      await NotificationService().initialize(context);
+    if (!mounted) return;
+    
+    // Initialize notification service
+    await NotificationService().initialize(context);
 
-      // 2. Fetch active session if any
-      final auth = Provider.of<AuthProvider>(context, listen: false);
-      await auth.checkCurrentUser();
+    if (!mounted) return;
 
-      // 3. Brief delay for visual splash transition
-      await Future.delayed(const Duration(seconds: 1));
+    // 2. Fetch active session if any
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    await auth.checkCurrentUser();
 
-      if (mounted) {
-        if (auth.isAuthenticated) {
-          if (auth.isAdmin) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const AdminDashboard()),
-            );
-          } else {
-            // Register active customer streams
-            Provider.of<OrderProvider>(context, listen: false)
-                .initCustomerStreams(auth.user!.uid);
-            Provider.of<FastFoodProvider>(context, listen: false)
-                .initCustomerOrdersStream(auth.user!.uid);
-            Provider.of<BroadcastProvider>(context, listen: false)
-                .initCustomerStreams(auth.user!.uid);
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const OrderTypeScreen()),
-            );
-          }
-        } else if (auth.tempGoogleUser != null) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const CompleteRegistrationScreen()),
-          );
-        } else {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const LoginScreen()),
-          );
-        }
+    // 3. Brief delay for visual splash transition
+    await Future.delayed(const Duration(seconds: 1));
+
+    if (!mounted) return;
+
+    if (auth.isAuthenticated) {
+      if (auth.isAdmin) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const AdminDashboard()),
+        );
+      } else {
+        // Register active customer streams
+        Provider.of<OrderProvider>(context, listen: false)
+            .initCustomerStreams(auth.user!.uid);
+        Provider.of<FastFoodProvider>(context, listen: false)
+            .initCustomerOrdersStream(auth.user!.uid);
+        Provider.of<BroadcastProvider>(context, listen: false)
+            .initCustomerStreams(auth.user!.uid);
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const OrderTypeScreen()),
+        );
       }
+    } else if (auth.tempGoogleUser != null) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const CompleteRegistrationScreen()),
+      );
+    } else {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
     }
   }
 
@@ -116,7 +118,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
               // Beautiful app logo placeholder
               Card(
                 elevation: 10,
-                shadowColor: Colors.black.withOpacity(0.2),
+                shadowColor: Colors.black.withValues(alpha: 0.2),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                 child: const Padding(
                   padding: EdgeInsets.all(20),

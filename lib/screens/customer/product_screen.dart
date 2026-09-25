@@ -11,7 +11,7 @@ import 'cart_screen.dart';
 class ProductScreen extends StatefulWidget {
   final String? initialCategory;
 
-  const ProductScreen({Key? key, this.initialCategory}) : super(key: key);
+  const ProductScreen({super.key, this.initialCategory});
 
   @override
   State<ProductScreen> createState() => _ProductScreenState();
@@ -216,7 +216,7 @@ class _ProductScreenState extends State<ProductScreen> {
                 color: Colors.white,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
+                    color: Colors.black.withValues(alpha: 0.08),
                     blurRadius: 8,
                     offset: const Offset(0, -3),
                   ),

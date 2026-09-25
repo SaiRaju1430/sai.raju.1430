@@ -7,7 +7,7 @@ import '../../widgets/custom_textfield.dart';
 import 'payment_screen.dart';
 
 class CheckoutScreen extends StatefulWidget {
-  const CheckoutScreen({Key? key}) : super(key: key);
+  const CheckoutScreen({super.key});
 
   @override
   State<CheckoutScreen> createState() => _CheckoutScreenState();

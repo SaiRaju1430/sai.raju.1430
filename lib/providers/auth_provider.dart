@@ -204,7 +204,13 @@ class AuthProvider extends ChangeNotifier {
       return false;
     }
 
-    if (_tempGoogleUser == null) {
+    User? targetUser = _tempGoogleUser;
+    if (targetUser == null) {
+      try {
+        targetUser = _db.client.auth.currentUser;
+      } catch (_) {}
+    }
+    if (targetUser == null) {
       _errorMessage = 'Please sign in with Google first.';
       notifyListeners();
       return false;
@@ -219,11 +225,11 @@ class AuthProvider extends ChangeNotifier {
       final String role = (cleanMobile == '9515639193') ? 'admin' : 'customer';
       
       _user = await _db.completeProfileRegistration(
-        uid: _tempGoogleUser!.id,
+        uid: targetUser.id,
         name: name.trim(),
         mobile: cleanMobile,
         role: role,
-        email: _tempGoogleUser!.email,
+        email: targetUser.email,
       );
 
       await NotificationService().setupUserFCMToken(_user!.uid);

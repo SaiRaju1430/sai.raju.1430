@@ -6,7 +6,7 @@ import '../../widgets/custom_button.dart';
 
 class OrderSuccessScreen extends StatelessWidget {
   final bool isPersonal;
-  const OrderSuccessScreen({Key? key, this.isPersonal = false}) : super(key: key);
+  const OrderSuccessScreen({super.key, this.isPersonal = false});
 
   @override
   Widget build(BuildContext context) {

@@ -6,10 +6,9 @@ import '../../core/theme/app_theme.dart';
 import '../../models/fast_food_order_model.dart';
 import '../../providers/fast_food_provider.dart';
 import '../../core/services/supabase_service.dart';
-import 'admin_dashboard.dart'; // To reuse VerifyFastFoodDeliveryCodeDialog
 
 class AdminFastFoodOrdersPage extends StatelessWidget {
-  const AdminFastFoodOrdersPage({Key? key}) : super(key: key);
+  const AdminFastFoodOrdersPage({super.key});
 
   Widget _buildStatusControl(BuildContext context, FastFoodOrderModel order, FastFoodProvider provider) {
     Color bgColor;
@@ -80,9 +79,9 @@ class AdminFastFoodOrdersPage extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 4),
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.06),
+          color: color.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.15)),
+          border: Border.all(color: color.withValues(alpha: 0.15)),
         ),
         child: Column(
           children: [
@@ -597,10 +596,10 @@ class VerifyFastFoodDeliveryCodeDialog extends StatefulWidget {
   final FastFoodProvider provider;
 
   const VerifyFastFoodDeliveryCodeDialog({
-    Key? key,
+    super.key,
     required this.order,
     required this.provider,
-  }) : super(key: key);
+  });
 
   @override
   State<VerifyFastFoodDeliveryCodeDialog> createState() => _VerifyFastFoodDeliveryCodeDialogState();

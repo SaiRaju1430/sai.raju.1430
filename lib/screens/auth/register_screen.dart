@@ -12,7 +12,7 @@ import '../customer/order_type_screen.dart';
 import '../admin/admin_dashboard.dart';
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({Key? key}) : super(key: key);
+  const RegisterScreen({super.key});
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();

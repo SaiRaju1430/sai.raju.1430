@@ -7,11 +7,11 @@ class CategoryCard extends StatelessWidget {
   final VoidCallback onTap;
 
   const CategoryCard({
-    Key? key,
+    super.key,
     required this.categoryName,
     required this.isSelected,
     required this.onTap,
-  }) : super(key: key);
+  });
 
   IconData _getCategoryIcon(String name) {
     switch (name) {
@@ -81,14 +81,14 @@ class CategoryCard extends StatelessWidget {
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: catColor.withOpacity(0.3),
+                    color: catColor.withValues(alpha: 0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 3),
                   )
                 ]
               : [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.02),
+                    color: Colors.black.withValues(alpha: 0.02),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   )

@@ -72,11 +72,11 @@ class NotificationService {
           _handleNotificationClick();
         });
       } else {
-        print('CampusKart: OneSignal running in simulated mode (no App ID).');
+        debugPrint('CampusKart: OneSignal running in simulated mode (no App ID).');
       }
       _initialized = true;
     } catch (e) {
-      print('CampusKart: Notification service running in local simulated mode: $e');
+      debugPrint('CampusKart: Notification service running in local simulated mode: $e');
       _initialized = true;
     }
   }
@@ -96,7 +96,7 @@ class NotificationService {
     try {
       OneSignal.Notifications.requestPermission(true);
     } catch (e) {
-      print('CampusKart: Request OneSignal permissions failed: $e');
+      debugPrint('CampusKart: Request OneSignal permissions failed: $e');
     }
   }
 
@@ -111,7 +111,7 @@ class NotificationService {
 
         final String? subscriptionId = OneSignal.User.pushSubscription.id;
         if (subscriptionId != null && subscriptionId.isNotEmpty) {
-          print('CampusKart: OneSignal setup for user $userId. ID: $subscriptionId ($deviceType)');
+          debugPrint('CampusKart: OneSignal setup for user $userId. ID: $subscriptionId ($deviceType)');
           await SupabaseService().registerPushSubscription(
             uid: userId,
             subscriptionId: subscriptionId,
@@ -124,7 +124,7 @@ class NotificationService {
           return;
         }
       } catch (e) {
-        print('CampusKart: OneSignal setup failed / offline mode: $e');
+        debugPrint('CampusKart: OneSignal setup failed / offline mode: $e');
       }
     }
 

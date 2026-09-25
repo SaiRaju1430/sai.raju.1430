@@ -13,7 +13,7 @@ class CustomButton extends StatelessWidget {
   final double? fontSize;
 
   const CustomButton({
-    Key? key,
+    super.key,
     required this.text,
     required this.onPressed,
     this.isLoading = false,
@@ -23,7 +23,7 @@ class CustomButton extends StatelessWidget {
     this.height,
     this.icon,
     this.fontSize,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +47,7 @@ class CustomButton extends StatelessWidget {
           boxShadow: enabled
               ? [
                   BoxShadow(
-                    color: themeColor.withOpacity(0.3),
+                    color: themeColor.withValues(alpha: 0.3),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   )

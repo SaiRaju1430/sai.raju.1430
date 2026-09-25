@@ -10,7 +10,7 @@ import 'verify_delivery_screen.dart';
 
 
 class PersonalRequestsScreen extends StatelessWidget {
-  const PersonalRequestsScreen({Key? key}) : super(key: key);
+  const PersonalRequestsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +28,7 @@ class PersonalRequestsScreen extends StatelessWidget {
 }
 
 class PersonalRequestsListView extends StatefulWidget {
-  const PersonalRequestsListView({Key? key}) : super(key: key);
+  const PersonalRequestsListView({super.key});
 
   @override
   State<PersonalRequestsListView> createState() => _PersonalRequestsListViewState();
@@ -160,7 +160,7 @@ class _PersonalRequestsListViewState extends State<PersonalRequestsListView> {
                       const SizedBox(height: 12),
                       Text(
                         'No custom requests submitted yet.', 
-                        style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.5)),
+                        style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.5)),
                       ),
                     ],
                   ),
@@ -199,7 +199,7 @@ class _PersonalRequestsListViewState extends State<PersonalRequestsListView> {
                                         'Mob: ${req.customerMobile} • Block: ${req.blockName} • Rm: ${req.roomNumber}',
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(fontSize: 12, color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6)),
+                                        style: TextStyle(fontSize: 12, color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.6)),
                                       ),
                                     ],
                                   ),
@@ -208,9 +208,9 @@ class _PersonalRequestsListViewState extends State<PersonalRequestsListView> {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: statusColor.withOpacity(0.1),
+                                    color: statusColor.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(color: statusColor.withOpacity(0.3)),
+                                    border: Border.all(color: statusColor.withValues(alpha: 0.3)),
                                   ),
                                   child: Text(
                                     req.status,
@@ -233,7 +233,7 @@ class _PersonalRequestsListViewState extends State<PersonalRequestsListView> {
                                     children: [
                                       Text(
                                         'REQUESTED ITEMS',
-                                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6), letterSpacing: 0.5),
+                                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.6), letterSpacing: 0.5),
                                       ),
                                       const SizedBox(height: 6),
                                       Text(
@@ -289,9 +289,9 @@ class _PersonalRequestsListViewState extends State<PersonalRequestsListView> {
                                 width: double.infinity,
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: Colors.purple.shade50.withOpacity(0.1),
+                                  color: Colors.purple.shade50.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: Colors.purple.shade300.withOpacity(0.4)),
+                                  border: Border.all(color: Colors.purple.shade300.withValues(alpha: 0.4)),
                                 ),
                                 child: Text(
                                   'Price request sent: ₹${req.productPrice.toStringAsFixed(0)} + ₹${req.deliveryCharge.toStringAsFixed(0)} delivery. Total = ₹${req.totalAmount.toStringAsFixed(0)}. Waiting for customer checkout.',
@@ -304,9 +304,9 @@ class _PersonalRequestsListViewState extends State<PersonalRequestsListView> {
                                 width: double.infinity,
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: Colors.blue.shade50.withOpacity(0.1),
+                                  color: Colors.blue.shade50.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: Colors.blue.shade300.withOpacity(0.4)),
+                                  border: Border.all(color: Colors.blue.shade300.withValues(alpha: 0.4)),
                                 ),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -320,78 +320,79 @@ class _PersonalRequestsListViewState extends State<PersonalRequestsListView> {
                                       'Payment Mobile Number: ${req.paymentMobileNumber.isEmpty ? "N/A" : req.paymentMobileNumber}',
                                       style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color),
                                     ),
-                                    const SizedBox(height: 8),
+                                    if (req.paymentId.isNotEmpty) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'UPI Ref / Txn ID: ${req.paymentId}',
+                                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
+                                      ),
+                                    ],
+                                    const SizedBox(height: 4),
                                     Text(
-                                      'Please verify this transaction in your bank account for amount ₹${req.totalAmount.toStringAsFixed(0)}.',
-                                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                                      'Total Paid: ₹${req.totalAmount.toStringAsFixed(0)}',
+                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Colors.blue),
+                                    ),
+                                    const SizedBox(height: 14),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: SizedBox(
+                                            height: 40,
+                                            child: OutlinedButton(
+                                              style: OutlinedButton.styleFrom(
+                                                padding: EdgeInsets.zero,
+                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                                side: const BorderSide(color: Colors.red),
+                                              ),
+                                              onPressed: () {
+                                                adminProvider.rejectPersonalRequest(req.id);
+                                              },
+                                              child: const Text('REJECT PAYMENT', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12)),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: CustomButton(
+                                            text: 'CONFIRM PAYMENT',
+                                            height: 40,
+                                            fontSize: 12,
+                                            color: Colors.blue.shade600,
+                                            onPressed: () async {
+                                              final success = await adminProvider.confirmPersonalRequestPayment(req.id);
+                                              if (context.mounted) {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(success 
+                                                        ? 'Payment confirmed! OTP is generated.' 
+                                                        : adminProvider.errorMessage ?? 'Verification failed.'),
+                                                    backgroundColor: success ? Colors.green : Colors.red,
+                                                  ),
+                                                );
+                                              }
+                                            },
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
                               ),
-                              const SizedBox(height: 14),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: SizedBox(
-                                      height: 44,
-                                      child: OutlinedButton(
-                                        style: OutlinedButton.styleFrom(
-                                          padding: EdgeInsets.zero,
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                                          side: const BorderSide(color: Colors.red, width: 1.5),
-                                        ),
-                                        onPressed: () {
-                                          adminProvider.rejectPersonalRequest(req.id);
-                                        },
-                                        child: const FittedBox(
-                                          fit: BoxFit.scaleDown,
-                                          child: Padding(
-                                            padding: EdgeInsets.symmetric(horizontal: 8.0),
-                                            child: Text('REJECT PAYMENT', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 13)),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: CustomButton(
-                                      text: 'CONFIRM PAYMENT',
-                                      height: 44,
-                                      fontSize: 13,
-                                      color: Colors.green.shade600,
-                                      onPressed: () async {
-                                        bool success = await adminProvider.confirmPersonalRequestPayment(req.id);
-                                        if (context.mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(
-                                              content: Text(success 
-                                                  ? 'Payment confirmed and WhatsApp receipt sent!' 
-                                                  : adminProvider.errorMessage ?? 'Verification failed.'),
-                                              backgroundColor: success ? Colors.green : Colors.red,
-                                            ),
-                                          );
-                                        }
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              ),
                             ] else if (req.status == 'Confirmed') ...[
-                              const SizedBox(height: 14),
+                              const SizedBox(height: 16),
                               CustomButton(
-                                text: 'SHIP REQUEST (OUT FOR DELIVERY)',
+                                text: 'MARK OUT FOR DELIVERY',
                                 height: 44,
                                 fontSize: 14,
                                 color: Colors.orange.shade700,
                                 onPressed: () async {
-                                  bool success = await adminProvider.shipPersonalRequest(req.id);
+                                  final success = await adminProvider.shipPersonalRequest(req.id);
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
                                         content: Text(success 
                                             ? 'Request is out for delivery!' 
-                                            : adminProvider.errorMessage ?? 'Failed to ship request.'),
+                                            : adminProvider.errorMessage ?? 'Failed to update status.'),
                                         backgroundColor: success ? Colors.green : Colors.red,
                                       ),
                                     );
@@ -404,9 +405,9 @@ class _PersonalRequestsListViewState extends State<PersonalRequestsListView> {
                                 width: double.infinity,
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: Colors.green.shade50.withOpacity(0.1),
+                                  color: Colors.green.shade50.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: Colors.green.shade300.withOpacity(0.4)),
+                                  border: Border.all(color: Colors.green.shade300.withValues(alpha: 0.4)),
                                 ),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -457,9 +458,9 @@ class _PersonalRequestsListViewState extends State<PersonalRequestsListView> {
                                 width: double.infinity,
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: Colors.green.shade50.withOpacity(0.1),
+                                  color: Colors.green.shade50.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: Colors.green.shade300.withOpacity(0.4)),
+                                  border: Border.all(color: Colors.green.shade300.withValues(alpha: 0.4)),
                                 ),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -504,9 +505,9 @@ class _PersonalRequestsListViewState extends State<PersonalRequestsListView> {
                                 width: double.infinity,
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: Colors.red.shade50.withOpacity(0.1),
+                                  color: Colors.red.shade50.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: Colors.red.shade300.withOpacity(0.4)),
+                                  border: Border.all(color: Colors.red.shade300.withValues(alpha: 0.4)),
                                 ),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,

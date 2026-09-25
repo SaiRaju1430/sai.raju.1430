@@ -10,9 +10,11 @@ import '../../widgets/custom_textfield.dart';
 import '../../widgets/responsive_container.dart';
 import '../customer/order_type_screen.dart';
 import '../admin/admin_dashboard.dart';
+import 'login_screen.dart';
+import '../../core/services/supabase_service.dart';
 
 class CompleteRegistrationScreen extends StatefulWidget {
-  const CompleteRegistrationScreen({Key? key}) : super(key: key);
+  const CompleteRegistrationScreen({super.key});
 
   @override
   State<CompleteRegistrationScreen> createState() => _CompleteRegistrationScreenState();
@@ -29,10 +31,13 @@ class _CompleteRegistrationScreenState extends State<CompleteRegistrationScreen>
     // Pre-fill name from Google Metadata if available
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final auth = Provider.of<AuthProvider>(context, listen: false);
-      if (auth.tempGoogleUser != null) {
-        final googleName = auth.tempGoogleUser!.userMetadata?['name'] ?? 
-                           auth.tempGoogleUser!.userMetadata?['full_name'] ?? '';
-        _nameController.text = googleName.toString();
+      final googleUser = auth.tempGoogleUser ?? SupabaseService().client.auth.currentUser;
+      if (googleUser != null) {
+        final googleName = googleUser.userMetadata?['name'] ?? 
+                           googleUser.userMetadata?['full_name'] ?? '';
+        if (_nameController.text.isEmpty && googleName.toString().isNotEmpty) {
+          _nameController.text = googleName.toString();
+        }
       }
     });
   }
@@ -101,6 +106,19 @@ class _CompleteRegistrationScreenState extends State<CompleteRegistrationScreen>
         elevation: 0,
         backgroundColor: Colors.transparent,
         foregroundColor: AppTheme.textPrimary,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          onPressed: () async {
+            auth.clearTempGoogleUser();
+            if (context.mounted) {
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                (route) => false,
+              );
+            }
+          },
+        ),
       ),
       body: SafeArea(
         child: ResponsiveContainer.form(

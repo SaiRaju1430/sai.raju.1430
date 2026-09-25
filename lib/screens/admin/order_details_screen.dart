@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
@@ -11,7 +12,7 @@ import 'send_broadcast_screen.dart';
 class OrderDetailsScreen extends StatelessWidget {
   final OrderModel order;
 
-  const OrderDetailsScreen({Key? key, required this.order}) : super(key: key);
+  const OrderDetailsScreen({super.key, required this.order});
 
   @override
   Widget build(BuildContext context) {
@@ -47,11 +48,38 @@ class OrderDetailsScreen extends StatelessWidget {
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Text(
-                          'ORDER #${activeOrder.id.replaceAll('ord_', '').toUpperCase()}',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        Expanded(
+                          child: InkWell(
+                            onTap: () {
+                              Clipboard.setData(ClipboardData(text: activeOrder.id));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Order ID copied to clipboard'),
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                            },
+                            borderRadius: BorderRadius.circular(4),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    'ORDER #${activeOrder.id.replaceAll('ord_', '').toUpperCase()}',
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Icon(Icons.copy_rounded, size: 14, color: Colors.grey),
+                              ],
+                            ),
+                          ),
                         ),
+                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
@@ -84,10 +112,22 @@ class OrderDetailsScreen extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Delivery OTP (Code):', style: TextStyle(fontSize: 13, color: Colors.grey, fontWeight: FontWeight.w600)),
-                        Text(
-                          activeOrder.verificationCode.isNotEmpty ? activeOrder.verificationCode : 'N/A',
-                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppTheme.primaryColor, letterSpacing: 2),
+                        const Expanded(
+                          flex: 2,
+                          child: Text(
+                            'Delivery OTP (Code):',
+                            style: TextStyle(fontSize: 13, color: Colors.grey, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          flex: 3,
+                          child: Text(
+                            activeOrder.verificationCode.isNotEmpty ? activeOrder.verificationCode : 'N/A',
+                            textAlign: TextAlign.right,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppTheme.primaryColor, letterSpacing: 2),
+                          ),
                         ),
                       ],
                     ),
@@ -95,10 +135,22 @@ class OrderDetailsScreen extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Created At:', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                        Text(
-                          DateFormat('dd MMM yyyy, hh:mm a').format(activeOrder.orderDate),
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                        const Expanded(
+                          flex: 2,
+                          child: Text(
+                            'Created At:',
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          flex: 3,
+                          child: Text(
+                            DateFormat('dd MMM yyyy, hh:mm a').format(activeOrder.orderDate),
+                            textAlign: TextAlign.right,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                          ),
                         ),
                       ],
                     ),
@@ -107,10 +159,22 @@ class OrderDetailsScreen extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('Delivered At:', style: TextStyle(fontSize: 12, color: Colors.green)),
-                          Text(
-                            DateFormat('dd MMM yyyy, hh:mm a').format(activeOrder.deliveredAt!),
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.green),
+                          const Expanded(
+                            flex: 2,
+                            child: Text(
+                              'Delivered At:',
+                              style: TextStyle(fontSize: 12, color: Colors.green),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            flex: 3,
+                            child: Text(
+                              DateFormat('dd MMM yyyy, hh:mm a').format(activeOrder.deliveredAt!),
+                              textAlign: TextAlign.right,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.green),
+                            ),
                           ),
                         ],
                       ),
@@ -120,10 +184,22 @@ class OrderDetailsScreen extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('Rejected At:', style: TextStyle(fontSize: 12, color: Colors.red)),
-                          Text(
-                            DateFormat('dd MMM yyyy, hh:mm a').format(activeOrder.rejectedAt!),
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.red),
+                          const Expanded(
+                            flex: 2,
+                            child: Text(
+                              'Rejected At:',
+                              style: TextStyle(fontSize: 12, color: Colors.red),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            flex: 3,
+                            child: Text(
+                              DateFormat('dd MMM yyyy, hh:mm a').format(activeOrder.rejectedAt!),
+                              textAlign: TextAlign.right,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.red),
+                            ),
                           ),
                         ],
                       ),
@@ -145,6 +221,8 @@ class OrderDetailsScreen extends StatelessWidget {
                               child: Text(
                                 '3-Day Retention: auto-deleted on ${DateFormat('dd MMM yyyy, hh:mm a').format(activeOrder.deleteAfter!)}',
                                 style: TextStyle(fontSize: 11, color: Colors.grey.shade700, fontWeight: FontWeight.w500),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 2,
                               ),
                             ),
                           ],
@@ -166,13 +244,19 @@ class OrderDetailsScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('CUSTOMER INFO', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6), letterSpacing: 0.5)),
+                    Text('CUSTOMER INFO', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.6), letterSpacing: 0.5)),
                     const SizedBox(height: 12),
                     Row(
                       children: [
                         const Icon(Icons.person_outline_rounded, color: AppTheme.primaryColor),
                         const SizedBox(width: 12),
-                        Text(activeOrder.customerName, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Theme.of(context).textTheme.bodyLarge?.color)),
+                        Expanded(
+                          child: Text(
+                            activeOrder.customerName,
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Theme.of(context).textTheme.bodyLarge?.color),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -180,7 +264,13 @@ class OrderDetailsScreen extends StatelessWidget {
                       children: [
                         const Icon(Icons.phone_android_rounded, color: AppTheme.primaryColor),
                         const SizedBox(width: 12),
-                        Text(activeOrder.customerMobile, style: TextStyle(fontSize: 14, color: Theme.of(context).textTheme.bodyLarge?.color)),
+                        Expanded(
+                          child: Text(
+                            activeOrder.customerMobile,
+                            style: TextStyle(fontSize: 14, color: Theme.of(context).textTheme.bodyLarge?.color),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -188,7 +278,13 @@ class OrderDetailsScreen extends StatelessWidget {
                       children: [
                         const Icon(Icons.room_rounded, color: AppTheme.primaryColor),
                         const SizedBox(width: 12),
-                        Text('${activeOrder.blockName}, Room ${activeOrder.roomNumber}', style: TextStyle(fontSize: 14, color: Theme.of(context).textTheme.bodyLarge?.color)),
+                        Expanded(
+                          child: Text(
+                            '${activeOrder.blockName}, Room ${activeOrder.roomNumber}',
+                            style: TextStyle(fontSize: 14, color: Theme.of(context).textTheme.bodyLarge?.color),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -232,7 +328,7 @@ class OrderDetailsScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('ORDER ITEMS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6), letterSpacing: 0.5)),
+                    Text('ORDER ITEMS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.6), letterSpacing: 0.5)),
                     const SizedBox(height: 12),
                     ListView.separated(
                       shrinkWrap: true,
@@ -244,10 +340,14 @@ class OrderDetailsScreen extends StatelessWidget {
                         return Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              '${item.quantity}x  ${item.productName}', 
-                              style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color),
+                            Expanded(
+                              child: Text(
+                                '${item.quantity}x  ${item.productName}', 
+                                style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color),
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
+                            const SizedBox(width: 8),
                             Text(
                               '₹${(item.price * item.quantity).toStringAsFixed(0)}',
                               style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
@@ -262,7 +362,7 @@ class OrderDetailsScreen extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Subtotal', style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6))),
+                        Text('Subtotal', style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.6))),
                         Text('₹${activeOrder.subtotal.toStringAsFixed(0)}', style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color)),
                       ],
                     ),
@@ -270,7 +370,7 @@ class OrderDetailsScreen extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Delivery Charges (Income)', style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6))),
+                        Text('Delivery Charges (Income)', style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.6))),
                         Text('₹${activeOrder.deliveryFee.toStringAsFixed(0)}', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
                       ],
                     ),
@@ -302,7 +402,7 @@ class OrderDetailsScreen extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6),
+                        color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
                         letterSpacing: 0.5,
                       ),
                     ),
@@ -310,13 +410,22 @@ class OrderDetailsScreen extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'UPI Account Name:',
-                          style: TextStyle(fontSize: 13, color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.8)),
+                        const Expanded(
+                          flex: 2,
+                          child: Text(
+                            'UPI Account Name:',
+                            style: TextStyle(fontSize: 13, color: Colors.grey),
+                          ),
                         ),
-                        Text(
-                          activeOrder.paymentAccountName.isEmpty ? 'N/A' : activeOrder.paymentAccountName,
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Theme.of(context).textTheme.bodyLarge?.color),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          flex: 3,
+                          child: Text(
+                            activeOrder.paymentAccountName.isEmpty ? 'N/A' : activeOrder.paymentAccountName,
+                            textAlign: TextAlign.right,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Theme.of(context).textTheme.bodyLarge?.color),
+                          ),
                         ),
                       ],
                     ),
@@ -324,16 +433,50 @@ class OrderDetailsScreen extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'Payment Mobile Number:',
-                          style: TextStyle(fontSize: 13, color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.8)),
+                        const Expanded(
+                          flex: 2,
+                          child: Text(
+                            'Payment Mobile Number:',
+                            style: TextStyle(fontSize: 13, color: Colors.grey),
+                          ),
                         ),
-                        Text(
-                          activeOrder.paymentMobileNumber.isEmpty ? 'N/A' : activeOrder.paymentMobileNumber,
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Theme.of(context).textTheme.bodyLarge?.color),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          flex: 3,
+                          child: Text(
+                            activeOrder.paymentMobileNumber.isEmpty ? 'N/A' : activeOrder.paymentMobileNumber,
+                            textAlign: TextAlign.right,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Theme.of(context).textTheme.bodyLarge?.color),
+                          ),
                         ),
                       ],
                     ),
+                    if (activeOrder.paymentId.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Expanded(
+                            flex: 2,
+                            child: Text(
+                              'UPI Ref / Txn ID:',
+                              style: TextStyle(fontSize: 13, color: Colors.grey),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            flex: 3,
+                            child: Text(
+                              activeOrder.paymentId,
+                              textAlign: TextAlign.right,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.primaryColor),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),

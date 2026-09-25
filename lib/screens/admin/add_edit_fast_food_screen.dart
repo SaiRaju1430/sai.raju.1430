@@ -15,7 +15,7 @@ import '../../widgets/demo_image_picker_sheet.dart';
 
 class AddEditFastFoodScreen extends StatefulWidget {
   final FastFoodItemModel? item;
-  const AddEditFastFoodScreen({Key? key, this.item}) : super(key: key);
+  const AddEditFastFoodScreen({super.key, this.item});
 
   @override
   State<AddEditFastFoodScreen> createState() => _AddEditFastFoodScreenState();
@@ -128,7 +128,7 @@ class _AddEditFastFoodScreenState extends State<AddEditFastFoodScreen> {
       final Uint8List bytes = await pickedFile.readAsBytes();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final fileExtension = pickedFile.name.split('.').last.toLowerCase();
-      final path = 'fast_food/ff_${timestamp}.$fileExtension';
+      final path = 'fast_food/ff_$timestamp.$fileExtension';
 
       final publicUrl = await SupabaseService().uploadImageBytes(
         bucketName: 'fast-food-images',
@@ -319,7 +319,7 @@ class _AddEditFastFoodScreenState extends State<AddEditFastFoodScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryColor.withOpacity(0.06),
+                          color: AppTheme.primaryColor.withValues(alpha: 0.06),
                           borderRadius: const BorderRadius.vertical(bottom: Radius.circular(15)),
                         ),
                         child: Row(
@@ -457,7 +457,7 @@ class _AddEditFastFoodScreenState extends State<AddEditFastFoodScreen> {
                   elevation: 1,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   child: SwitchListTile(
-                    activeColor: AppTheme.primaryColor,
+                    activeThumbColor: AppTheme.primaryColor,
                     title: const Text('Available for Ordering', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                     subtitle: const Text('If disabled, customers will see "Out of Stock".', style: TextStyle(fontSize: 11)),
                     value: _available,

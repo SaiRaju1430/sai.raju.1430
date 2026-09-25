@@ -186,7 +186,7 @@ class FastFoodProvider extends ChangeNotifier {
             targetUserId: customerId,
           );
         } catch (e) {
-          print("Failed to save customer order delivery notification: $e");
+          debugPrint("Failed to save customer order delivery notification: $e");
         }
       }
 
@@ -205,7 +205,7 @@ class FastFoodProvider extends ChangeNotifier {
     if (order.deliveryCode.isEmpty) {
       final fallbackOtp = (Random().nextInt(9000) + 1000).toString();
       // Log error for debugging
-      print("DEBUG ERROR: Fast Food order ${order.orderId} is missing deliveryOtp! Automatically generating fallback OTP: $fallbackOtp");
+      debugPrint("DEBUG ERROR: Fast Food order ${order.orderId} is missing deliveryOtp! Automatically generating fallback OTP: $fallbackOtp");
       
       try {
         if (!_db.isOfflineMode) {
@@ -223,7 +223,7 @@ class FastFoodProvider extends ChangeNotifier {
           }
         }
       } catch (e) {
-        print("DEBUG ERROR: Failed to generate fallback OTP: $e");
+        debugPrint("DEBUG ERROR: Failed to generate fallback OTP: $e");
       }
       return order.copyWith(deliveryCode: fallbackOtp, deliveryVerified: false);
     }
@@ -400,6 +400,44 @@ class FastFoodProvider extends ChangeNotifier {
       'fastFoodEnabled': false,
       'timerStartedAt': null,
       'timerEndsAt': null,
+    });
+  }
+
+  Future<void> extendFastFoodTimer(int additionalMinutes) async {
+    final endsAtVal = _timerData['timerEndsAt'];
+    final startedAtVal = _timerData['timerStartedAt'];
+    final now = DateTime.now();
+    DateTime baseTime = now;
+    if (endsAtVal != null) {
+      final DateTime currentEndsAt = endsAtVal.runtimeType.toString() == 'Timestamp'
+          ? (endsAtVal as dynamic).toDate()
+          : (endsAtVal is DateTime ? endsAtVal : DateTime.tryParse(endsAtVal.toString()) ?? now);
+      if (currentEndsAt.isAfter(now)) {
+        baseTime = currentEndsAt;
+      }
+    }
+    final newEndsAt = baseTime.add(Duration(minutes: additionalMinutes));
+    final startedAt = startedAtVal != null ? DateTime.tryParse(startedAtVal.toString()) ?? now : now;
+    final totalDuration = newEndsAt.difference(startedAt).inMinutes;
+
+    await _db.updateFastFoodSettings({
+      'fastFoodEnabled': true,
+      'timerDuration': totalDuration > 0 ? totalDuration : additionalMinutes,
+      'timerEndsAt': newEndsAt.toIso8601String(),
+      'closingNotificationSent': false,
+    });
+  }
+
+  Future<void> setCustomFastFoodTimerEndTime(DateTime customEndsAt) async {
+    final now = DateTime.now();
+    if (customEndsAt.isBefore(now)) return;
+    final durationMinutes = customEndsAt.difference(now).inMinutes;
+    await _db.updateFastFoodSettings({
+      'fastFoodEnabled': true,
+      'timerDuration': durationMinutes,
+      'timerStartedAt': now.toIso8601String(),
+      'timerEndsAt': customEndsAt.toIso8601String(),
+      'closingNotificationSent': false,
     });
   }
 

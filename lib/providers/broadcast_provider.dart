@@ -3,30 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/services/supabase_service.dart';
 import '../core/services/notification_service.dart';
-import '../models/order_model.dart';
-import '../models/personal_request_model.dart';
-import '../models/fast_food_order_model.dart';
 import 'auth_provider.dart';
 
 class BroadcastProvider extends ChangeNotifier {
   final SupabaseService _db = SupabaseService();
   String? _customerId;
   List<Map<String, dynamic>> _allBroadcasts = [];
-  List<OrderModel> _customerOrders = [];
-  List<FastFoodOrderModel> _customerFastFoodOrders = [];
-  List<PersonalRequestModel> _customerRequests = [];
-
   List<Map<String, dynamic>> _rawNotifications = [];
 
   final Set<String> _notifiedBroadcastIds = {};
-  final Set<String> _readBroadcastIds = {};
-  StreamSubscription? _broadcastsSubscription;
-  StreamSubscription? _readIdsSubscription;
   DateTime _streamStartTime = DateTime.now();
   StreamSubscription<List<Map<String, dynamic>>>? _notificationsSubscription;
-  StreamSubscription<List<OrderModel>>? _ordersSubscription;
-  StreamSubscription<List<FastFoodOrderModel>>? _fastFoodOrdersSubscription;
-  StreamSubscription<List<PersonalRequestModel>>? _requestsSubscription;
 
   List<Map<String, dynamic>> get allBroadcasts => _allBroadcasts;
 
@@ -55,34 +42,9 @@ class BroadcastProvider extends ChangeNotifier {
   void initCustomerStreams(String customerId) {
     _customerId = customerId;
     _notifiedBroadcastIds.clear();
-    _readBroadcastIds.clear();
     _streamStartTime = DateTime.now().subtract(const Duration(seconds: 5));
 
-    // 1. Subscribe to General Orders
-    _ordersSubscription?.cancel();
-    _ordersSubscription = _db.streamCustomerOrders(customerId).listen((orders) {
-      _customerOrders = orders;
-      _checkAndTriggerNotifications();
-      notifyListeners();
-    });
-
-    // 2. Subscribe to Fast Food Orders
-    _fastFoodOrdersSubscription?.cancel();
-    _fastFoodOrdersSubscription = _db.streamCustomerFastFoodOrders(customerId).listen((orders) {
-      _customerFastFoodOrders = orders;
-      _checkAndTriggerNotifications();
-      notifyListeners();
-    });
-
-    // 3. Subscribe to Personal Requests
-    _requestsSubscription?.cancel();
-    _requestsSubscription = _db.streamCustomerRequests(customerId).listen((reqs) {
-      _customerRequests = reqs;
-      _checkAndTriggerNotifications();
-      notifyListeners();
-    });
-
-    // 4. Subscribe to global notifications collection (per-user filtered)
+    // Subscribe to global notifications collection (per-user filtered)
     _notificationsSubscription?.cancel();
     _notificationsSubscription = _db.streamNotificationsForUser(customerId).listen((notifications) {
       _rawNotifications = notifications;
@@ -124,20 +86,9 @@ class BroadcastProvider extends ChangeNotifier {
   void clearCustomerStreams() {
     _customerId = null;
     _allBroadcasts = [];
-    _customerOrders = [];
-    _customerFastFoodOrders = [];
-    _customerRequests = [];
     _rawNotifications = [];
-    _ordersSubscription?.cancel();
-    _fastFoodOrdersSubscription?.cancel();
-    _requestsSubscription?.cancel();
     _notificationsSubscription?.cancel();
     notifyListeners();
-  }
-
-  bool _isOrderActive(String status) {
-    final s = status.trim().toLowerCase();
-    return s != 'delivered' && s != 'rejected' && s != 'cancelled';
   }
 
   DateTime _parseDateTime(dynamic value) {
@@ -182,7 +133,7 @@ class BroadcastProvider extends ChangeNotifier {
             continue;
           }
         } catch (e) {
-          print("CampusKart BroadcastProvider: Error checking notificationsEnabled: $e");
+          debugPrint("CampusKart BroadcastProvider: Error checking notificationsEnabled: $e");
         }
       }
       NotificationService().showSimulatedNotification(title, content);
@@ -260,12 +211,7 @@ class BroadcastProvider extends ChangeNotifier {
 
   @override
   void dispose() {
-    _ordersSubscription?.cancel();
-    _fastFoodOrdersSubscription?.cancel();
-    _requestsSubscription?.cancel();
-    _broadcastsSubscription?.cancel();
     _notificationsSubscription?.cancel();
-    _readIdsSubscription?.cancel();
     super.dispose();
   }
 }

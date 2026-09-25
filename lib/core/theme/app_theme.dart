@@ -26,13 +26,13 @@ class AppTheme {
         primary: primaryColor,
         secondary: secondaryColor,
         tertiary: accentColor,
-        background: backgroundColor,
+        surface: backgroundColor,
       ),
       scaffoldBackgroundColor: backgroundColor,
       cardTheme: CardThemeData(
         color: cardColor,
         elevation: 2,
-        shadowColor: Colors.black.withOpacity(0.05),
+        shadowColor: Colors.black.withValues(alpha: 0.05),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
@@ -105,13 +105,13 @@ class AppTheme {
         primary: primaryColor,
         secondary: secondaryColor,
         tertiary: accentColor,
-        background: const Color(0xFF121212),
+        surface: const Color(0xFF121212),
       ),
       scaffoldBackgroundColor: const Color(0xFF121212),
       cardTheme: CardThemeData(
         color: const Color(0xFF1E1E1E),
         elevation: 2,
-        shadowColor: Colors.black.withOpacity(0.2),
+        shadowColor: Colors.black.withValues(alpha: 0.2),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),

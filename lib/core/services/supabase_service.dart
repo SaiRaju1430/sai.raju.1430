@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:math';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -31,8 +30,10 @@ class SupabaseService {
           final _ = client.auth.currentSession;
           debugPrint("CampusKart: Supabase active and ready (${SupabaseOptions.url}).");
         } catch (_) {
+          // ignore: deprecated_member_use
           await Supabase.initialize(
             url: SupabaseOptions.url,
+            // ignore: deprecated_member_use
             anonKey: SupabaseOptions.anonKey,
           );
           debugPrint("CampusKart: Supabase initialized successfully.");
@@ -58,10 +59,31 @@ class SupabaseService {
   // --- AUTHENTICATION & PROFILES ---
   // ==========================================
 
-  Future<User?> signInWithGoogle() async {
+  Future<User?> signInWithGoogle({String? redirectTo}) async {
     try {
+      if (kIsWeb) {
+        // On Web, use Supabase OAuth redirect flow.
+        // Web browsers do not provide native ID Tokens via google_sign_in without GIS credential buttons,
+        // which previously resulted in "No ID Token received" errors. Supabase OAuth seamlessly redirects
+        // to Google and returns to the current website URL.
+        final uri = Uri.base;
+        final portStr = (uri.hasPort && uri.port != 80 && uri.port != 443) ? ':${uri.port}' : '';
+        final path = uri.path.isEmpty ? '/' : uri.path;
+        final defaultRedirect = '${uri.scheme}://${uri.host}$portStr$path';
+        final effectiveRedirect = redirectTo ?? defaultRedirect;
+
+        debugPrint("CampusKart: Initiating Web Google OAuth with redirect: $effectiveRedirect");
+
+        await client.auth.signInWithOAuth(
+          OAuthProvider.google,
+          redirectTo: effectiveRedirect.isNotEmpty ? effectiveRedirect : null,
+        );
+
+        return client.auth.currentUser;
+      }
+
+      // On Mobile (Android / iOS), use native GoogleSignIn with ID Token:
       final GoogleSignIn googleSignIn = GoogleSignIn(
-        clientId: kIsWeb ? SupabaseOptions.webClientId : null,
         serverClientId: SupabaseOptions.webClientId,
         scopes: ['email', 'openid', 'profile'],
       );
@@ -80,7 +102,7 @@ class SupabaseService {
       final String? accessToken = googleAuth.accessToken;
 
       if (idToken == null) {
-        throw Exception("Google Sign-In failed: No ID Token received.");
+        throw Exception("Google Sign-In failed: No ID Token received from Google Play Services.");
       }
 
       final AuthResponse res = await client.auth.signInWithIdToken(
@@ -298,13 +320,15 @@ class SupabaseService {
   }
 
   Future<void> logout() async {
-    try {
-      final GoogleSignIn googleSignIn = GoogleSignIn(
-        serverClientId: SupabaseOptions.webClientId,
-        scopes: ['email', 'profile'],
-      );
-      await googleSignIn.signOut();
-    } catch (_) {}
+    if (!kIsWeb) {
+      try {
+        final GoogleSignIn googleSignIn = GoogleSignIn(
+          serverClientId: SupabaseOptions.webClientId,
+          scopes: ['email', 'profile'],
+        );
+        await googleSignIn.signOut();
+      } catch (_) {}
+    }
     try {
       await client.auth.signOut();
     } catch (e) {
@@ -377,37 +401,73 @@ class SupabaseService {
     int quantity,
     String imageUrl,
     String description,
-    String unit,
-  ) async {
-    final response = await client.from('products').insert({
-      'name': name,
-      'category': category,
-      'price': price,
-      'quantity': quantity,
-      'image_url': imageUrl,
-      'description': description,
-      'unit': unit,
-      'available': quantity > 0,
-    }).select('id').single();
-    return response['id'].toString();
+    String unit, {
+    bool isOffer = false,
+    String offerLabel = 'OFFER',
+    double? offerPrice,
+  }) async {
+    try {
+      final finalDescription = ProductModel.encodeDescriptionWithOffer(
+        description,
+        isOffer: isOffer,
+        offerLabel: offerLabel,
+        offerPrice: offerPrice,
+      );
+
+      final insertPayload = {
+        'name': name.trim(),
+        'category': category.trim(),
+        'price': price,
+        'quantity': quantity,
+        'image_url': imageUrl.trim(),
+        'description': finalDescription,
+        'unit': unit.trim(),
+        'available': quantity > 0,
+      };
+
+      final response = await client.from('products').insert(insertPayload).select('id').single();
+      return response['id'].toString();
+    } catch (e) {
+      debugPrint("CampusKart: Supabase addProduct error: $e");
+      rethrow;
+    }
   }
 
   Future<void> updateProduct(ProductModel product) async {
-    await client.from('products').update({
-      'name': product.name,
-      'category': product.category,
-      'price': product.price,
-      'quantity': product.quantity,
-      'image_url': product.imageUrl,
-      'description': product.description,
-      'unit': product.unit,
-      'available': product.quantity > 0,
-      'updated_at': DateTime.now().toIso8601String(),
-    }).eq('id', product.id);
+    try {
+      final finalDescription = ProductModel.encodeDescriptionWithOffer(
+        product.description,
+        isOffer: product.isOffer,
+        offerLabel: product.offerLabel,
+        offerPrice: product.offerPrice,
+      );
+
+      final updatePayload = {
+        'name': product.name.trim(),
+        'category': product.category.trim(),
+        'price': product.price,
+        'quantity': product.quantity,
+        'image_url': product.imageUrl.trim(),
+        'description': finalDescription,
+        'unit': product.unit.trim(),
+        'available': product.available && product.quantity > 0,
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+
+      await client.from('products').update(updatePayload).eq('id', product.id);
+    } catch (e) {
+      debugPrint("CampusKart: Supabase updateProduct error: $e");
+      rethrow;
+    }
   }
 
   Future<void> deleteProduct(String id) async {
-    await client.from('products').delete().eq('id', id);
+    try {
+      await client.from('products').delete().eq('id', id);
+    } catch (e) {
+      debugPrint("CampusKart: Supabase deleteProduct error: $e");
+      rethrow;
+    }
   }
 
   // ==========================================
@@ -470,14 +530,12 @@ class SupabaseService {
     Future<void> fetchAndAdd() async {
       try {
         final response = await client.from('orders').select('*, order_items(*)');
-        final now = DateTime.now();
         final orders = (response as List)
             .map((data) {
               final mappedData = Map<String, dynamic>.from(data);
               mappedData['items'] = data['order_items'];
               return OrderModel.fromMap(mappedData, data['id'] ?? '');
             })
-            .where((order) => order.deleteAfter == null || order.deleteAfter!.isAfter(now))
             .toList();
         
         orders.sort((a, b) => b.orderDate.compareTo(a.orderDate));
@@ -612,10 +670,8 @@ class SupabaseService {
         .from('personal_requests')
         .stream(primaryKey: ['id'])
         .map((list) {
-          final now = DateTime.now();
           final reqs = list
               .map((data) => PersonalRequestModel.fromMap(data, data['id'] ?? ''))
-              .where((req) => req.deleteAfter == null || req.deleteAfter!.isAfter(now))
               .toList();
           reqs.sort((a, b) => b.requestDate.compareTo(a.requestDate));
           return reqs;
@@ -715,11 +771,15 @@ class SupabaseService {
   // ==========================================
 
   Stream<bool> streamShopAvailability() {
-    return client
-        .from('settings')
-        .stream(primaryKey: ['id'])
-        .eq('id', 'global')
-        .map((list) => list.isNotEmpty ? (list.first['owner_available'] ?? true) : true);
+    try {
+      return client
+          .from('settings')
+          .stream(primaryKey: ['id'])
+          .eq('id', 'global')
+          .map((list) => list.isNotEmpty ? (list.first['owner_available'] ?? true) : true);
+    } catch (_) {
+      return Stream.value(true);
+    }
   }
 
   Future<void> toggleShopAvailability(bool available) async {
@@ -841,14 +901,12 @@ class SupabaseService {
     Future<void> fetchAndAdd() async {
       try {
         final response = await client.from('fast_food_orders').select('*, fast_food_order_items(*)');
-        final now = DateTime.now();
         final orders = (response as List)
             .map((data) {
               final mappedData = Map<String, dynamic>.from(data);
               mappedData['items'] = data['fast_food_order_items'];
               return FastFoodOrderModel.fromMap(mappedData, data['id'] ?? '');
             })
-            .where((order) => order.deleteAfter == null || order.deleteAfter!.isAfter(now))
             .toList();
         
         orders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -1091,19 +1149,29 @@ class SupabaseService {
   }
 
   Stream<List<Map<String, dynamic>>> streamNotificationsForUser(String uid) {
+    final cutoff = DateTime.now().subtract(const Duration(days: 3));
     return client
         .from('notifications')
         .stream(primaryKey: ['id'])
         .eq('user_id', uid)
         .map((list) {
-          final mapped = list.map((doc) => {
-                'id': doc['id'],
-                'userId': doc['user_id'],
-                'title': doc['title'],
-                'message': doc['message'],
-                'isRead': doc['is_read'],
-                'createdAt': doc['created_at'],
-              }).toList();
+          final mapped = list
+              .where((doc) {
+                final createdAtStr = doc['created_at'];
+                if (createdAtStr == null) return true;
+                final dt = DateTime.tryParse(createdAtStr.toString());
+                if (dt == null) return true;
+                return dt.isAfter(cutoff);
+              })
+              .map((doc) => {
+                    'id': doc['id'],
+                    'userId': doc['user_id'],
+                    'title': doc['title'],
+                    'message': doc['message'],
+                    'isRead': doc['is_read'],
+                    'createdAt': doc['created_at'],
+                  })
+              .toList();
           mapped.sort((a, b) => DateTime.parse(b['createdAt'].toString()).compareTo(DateTime.parse(a['createdAt'].toString())));
           return mapped;
         });

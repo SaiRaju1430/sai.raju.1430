@@ -14,7 +14,7 @@ import '../admin/admin_dashboard.dart';
 import 'complete_registration_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+  const LoginScreen({super.key});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -236,7 +236,7 @@ class GestureButton extends StatelessWidget {
   final String text;
   final VoidCallback onTap;
 
-  const GestureButton({Key? key, required this.text, required this.onTap}) : super(key: key);
+  const GestureButton({super.key, required this.text, required this.onTap});
 
   @override
   Widget build(BuildContext context) {

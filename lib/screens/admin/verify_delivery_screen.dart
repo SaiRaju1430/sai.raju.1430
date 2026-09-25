@@ -7,7 +7,7 @@ import '../../widgets/custom_button.dart';
 class VerifyDeliveryScreen extends StatefulWidget {
   final String orderId;
 
-  const VerifyDeliveryScreen({Key? key, required this.orderId}) : super(key: key);
+  const VerifyDeliveryScreen({super.key, required this.orderId});
 
   @override
   State<VerifyDeliveryScreen> createState() => _VerifyDeliveryScreenState();

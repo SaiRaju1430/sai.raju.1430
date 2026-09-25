@@ -112,6 +112,7 @@ class AdminProvider extends ChangeNotifier {
   EarningsModel get earningsDetails {
     double todayIncome = 0.0;
     double monthlyIncome = 0.0;
+    double totalEarnings = 0.0;
     int todayOrdersCount = 0;
     int pendingOrders = 0;
     int pendingReqs = 0;
@@ -123,6 +124,7 @@ class AdminProvider extends ChangeNotifier {
 
     for (var order in _allOrders) {
       if (order.status == 'Delivered') {
+        totalEarnings += order.deliveryFee;
         if (order.orderDate.isAfter(todayStart)) {
           // Income is calculated specifically from delivery charges
           todayIncome += order.deliveryFee;
@@ -156,6 +158,7 @@ class AdminProvider extends ChangeNotifier {
 
       // Add personal request delivery charge to income if delivered successfully
       if (req.status == 'Delivered') {
+        totalEarnings += req.deliveryCharge;
         if (req.requestDate.isAfter(todayStart)) {
           todayIncome += req.deliveryCharge;
           deliveredOrdersCount++;
@@ -169,6 +172,7 @@ class AdminProvider extends ChangeNotifier {
     return EarningsModel(
       todayIncome: todayIncome,
       monthlyIncome: monthlyIncome,
+      totalEarnings: totalEarnings,
       todayOrdersCount: todayOrdersCount,
       pendingOrdersCount: pendingOrders,
       pendingRequestsCount: pendingReqs,

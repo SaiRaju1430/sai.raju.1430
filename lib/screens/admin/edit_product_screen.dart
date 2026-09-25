@@ -34,11 +34,15 @@ class _EditProductScreenState extends State<EditProductScreen> {
   late String _selectedCategory;
   late String _selectedUnit;
   late bool _available;
+  late bool _isOffer;
   bool _notifyCustomers = false;
 
   late String _selectedImageUrl;
   late String _selectedImageLabel;
   bool _isUploadingImage = false;
+
+  late TextEditingController _offerLabelController;
+  late TextEditingController _offerPriceController;
 
   @override
   void initState() {
@@ -50,6 +54,14 @@ class _EditProductScreenState extends State<EditProductScreen> {
     _selectedCategory = widget.product.category;
     _selectedUnit = widget.product.unit;
     _available = widget.product.available;
+    _isOffer = widget.product.isOffer;
+
+    _offerLabelController = TextEditingController(
+      text: widget.product.offerLabel.isNotEmpty ? widget.product.offerLabel : 'OFFER',
+    );
+    _offerPriceController = TextEditingController(
+      text: widget.product.offerPrice != null ? widget.product.offerPrice!.toStringAsFixed(0) : '',
+    );
 
     _selectedImageUrl = widget.product.imageUrl;
     _selectedImageLabel = _selectedImageUrl.startsWith('assets/')
@@ -77,6 +89,8 @@ class _EditProductScreenState extends State<EditProductScreen> {
     _qtyController.dispose();
     _imageController.dispose();
     _descController.dispose();
+    _offerLabelController.dispose();
+    _offerPriceController.dispose();
     super.dispose();
   }
 
@@ -113,7 +127,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
       final Uint8List bytes = await pickedFile.readAsBytes();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final fileExtension = pickedFile.name.split('.').last.toLowerCase();
-      final path = 'products/prod_${timestamp}.$fileExtension';
+      final path = 'products/prod_$timestamp.$fileExtension';
 
       final publicUrl = await SupabaseService().uploadImageBytes(
         bucketName: 'product-images',
@@ -151,19 +165,58 @@ class _EditProductScreenState extends State<EditProductScreen> {
     }
   }
 
-  Future<void> _handleUpdate() async {
-    if (_selectedImageUrl.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select or upload a product image.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
+  Future<void> _handleDelete() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Product'),
+        content: Text('Are you sure you want to permanently delete "${widget.product.name}" from the store inventory?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
 
+    if (confirmed == true && mounted) {
+      final productProvider = Provider.of<ProductProvider>(context, listen: false);
+      final success = await productProvider.deleteProduct(widget.product.id);
+      if (mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Product "${widget.product.name}" deleted successfully.'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          Navigator.pop(context);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(productProvider.errorMessage ?? 'Unable to delete product. Please check your connection or admin permissions.'),
+              backgroundColor: Colors.red.shade600,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _handleUpdate() async {
     if (_formKey.currentState!.validate()) {
       final productProvider = Provider.of<ProductProvider>(context, listen: false);
+
+      double? offerPrice;
+      if (_isOffer && _offerPriceController.text.trim().isNotEmpty) {
+        offerPrice = double.tryParse(_offerPriceController.text.trim());
+      }
 
       ProductModel updatedProduct = widget.product.copyWith(
         name: _nameController.text.trim(),
@@ -174,6 +227,10 @@ class _EditProductScreenState extends State<EditProductScreen> {
         description: _descController.text.trim(),
         unit: _selectedUnit,
         available: _available && int.parse(_qtyController.text.trim()) > 0,
+        isOffer: _isOffer,
+        offerLabel: _offerLabelController.text.trim().isEmpty ? 'OFFER' : _offerLabelController.text.trim(),
+        offerPrice: offerPrice,
+        clearOfferPrice: !_isOffer || (_offerPriceController.text.trim().isEmpty),
       );
 
       bool success = await productProvider.updateProduct(updatedProduct, notifyCustomers: _notifyCustomers);
@@ -185,7 +242,10 @@ class _EditProductScreenState extends State<EditProductScreen> {
         Navigator.pop(context);
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(productProvider.errorMessage ?? 'Update failed.')),
+          SnackBar(
+            content: Text(productProvider.errorMessage ?? 'Unable to update product. Please check your connection or admin permissions.'),
+            backgroundColor: Colors.red.shade600,
+          ),
         );
       }
     }
@@ -202,6 +262,14 @@ class _EditProductScreenState extends State<EditProductScreen> {
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+            tooltip: 'Delete Product',
+            onPressed: productProvider.isLoading ? null : _handleDelete,
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -381,7 +449,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
                           ),
                           const SizedBox(height: 6),
                           DropdownButtonFormField<String>(
-                            value: _selectedCategory,
+                            initialValue: _selectedCategory,
                             decoration: const InputDecoration(
                               contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                             ),
@@ -422,7 +490,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
                           ),
                           const SizedBox(height: 6),
                           DropdownButtonFormField<String>(
-                            value: _selectedUnit,
+                            initialValue: _selectedUnit,
                             decoration: const InputDecoration(
                               contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                             ),
@@ -499,12 +567,144 @@ class _EditProductScreenState extends State<EditProductScreen> {
                 ),
                 const SizedBox(height: 20),
 
+                // ========================================================
+                // --- SPECIAL OFFER & HIGHLIGHT SETTINGS ---
+                // ========================================================
+                Container(
+                  decoration: BoxDecoration(
+                    color: _isOffer ? Colors.orange.shade50.withValues(alpha: 0.5) : Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: _isOffer ? Colors.orange.shade300 : Colors.grey.shade300,
+                      width: _isOffer ? 1.5 : 1.0,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SwitchListTile(
+                        activeThumbColor: Colors.orange.shade700,
+                        activeTrackColor: Colors.orange.shade200,
+                        secondary: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: _isOffer ? Colors.orange.shade100 : Colors.grey.shade200,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.local_fire_department_rounded,
+                            color: _isOffer ? Colors.orange.shade700 : Colors.grey.shade600,
+                            size: 22,
+                          ),
+                        ),
+                        title: const Text(
+                          'Offer Item',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                        ),
+                        subtitle: Text(
+                          _isOffer
+                              ? 'Highlighted with an eye-catching OFFER badge on customer screens.'
+                              : 'Toggle ON to mark and highlight this product as a special offer.',
+                          style: TextStyle(fontSize: 12, color: _isOffer ? Colors.orange.shade900 : AppTheme.textSecondary),
+                        ),
+                        value: _isOffer,
+                        onChanged: (val) {
+                          setState(() {
+                            _isOffer = val;
+                          });
+                        },
+                      ),
+                      if (_isOffer) ...[
+                        const Divider(height: 1),
+                        Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Live Badge Preview
+                              Row(
+                                children: [
+                                  const Text(
+                                    'Badge Preview:',
+                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.textSecondary),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: [Colors.orange.shade700, Colors.deepOrange.shade600],
+                                      ),
+                                      borderRadius: BorderRadius.circular(20),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.deepOrange.withValues(alpha: 0.3),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Text('🔥 ', style: TextStyle(fontSize: 11)),
+                                        Text(
+                                          (_offerLabelController.text.trim().isEmpty ? 'OFFER' : _offerLabelController.text.trim()).toUpperCase(),
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w900,
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 14),
+
+                              // Offer badge text input
+                              CustomTextField(
+                                label: 'Offer Title / Badge Text (Optional)',
+                                hint: 'e.g. OFFER, HOT DEAL, 20% OFF',
+                                controller: _offerLabelController,
+                                prefixIcon: Icons.discount_rounded,
+                                onChanged: (val) => setState(() {}),
+                              ),
+                              const SizedBox(height: 14),
+
+                              // Optional Offer Price input
+                              CustomTextField(
+                                label: 'Offer Price (₹) (Optional)',
+                                hint: 'e.g. Discounted price (leave empty to keep regular price)',
+                                controller: _offerPriceController,
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                prefixIcon: Icons.sell_rounded,
+                                validator: (val) {
+                                  if (val != null && val.trim().isNotEmpty) {
+                                    final parsed = double.tryParse(val.trim());
+                                    if (parsed == null) return 'Invalid number.';
+                                    if (parsed <= 0) return 'Offer price must be > 0.';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+
                 // Product Status Toggle
                 Card(
                   elevation: 1,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   child: SwitchListTile(
-                    activeColor: AppTheme.primaryColor,
+                    activeThumbColor: AppTheme.primaryColor,
                     secondary: const Icon(Icons.check_circle_outline_rounded, color: AppTheme.primaryColor),
                     title: const Text('Store Availability Status', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                     subtitle: const Text('Toggle to immediately hide/show this item in storefront.', style: TextStyle(fontSize: 11)),
@@ -545,6 +745,26 @@ class _EditProductScreenState extends State<EditProductScreen> {
                   text: 'UPDATE PRODUCT',
                   isLoading: productProvider.isLoading || _isUploadingImage,
                   onPressed: _handleUpdate,
+                ),
+                const SizedBox(height: 12),
+
+                // Delete Product Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: OutlinedButton.icon(
+                    onPressed: (productProvider.isLoading || _isUploadingImage) ? null : _handleDelete,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                      side: BorderSide(color: Colors.red.shade300, width: 1.5),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    icon: const Icon(Icons.delete_forever_rounded, size: 20),
+                    label: const Text(
+                      'DELETE PRODUCT',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 0.5),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 24),
               ],

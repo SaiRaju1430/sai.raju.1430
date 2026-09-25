@@ -27,4 +27,9 @@ class AppConstants {
   static const double urgentFee250_349 = 35.0;
   static const double urgentFee350_499 = 40.0;
   static const double urgentFee500Plus = 45.0;
+
+  // UPI Payment Configuration
+  static const String adminUpiNumber = '9787684437';
+  static const String adminUpiId = '9787684437@upi';
+  static const String adminUpiMerchantName = 'CampusKart';
 }

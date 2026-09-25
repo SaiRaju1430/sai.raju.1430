@@ -10,7 +10,7 @@ import 'cart_screen.dart';
 class ProductDetailScreen extends StatelessWidget {
   final ProductModel product;
 
-  const ProductDetailScreen({Key? key, required this.product}) : super(key: key);
+  const ProductDetailScreen({super.key, required this.product});
 
   @override
   Widget build(BuildContext context) {
@@ -73,7 +73,7 @@ class ProductDetailScreen extends StatelessWidget {
                   Container(
                     width: double.infinity,
                     height: 280,
-                    color: Colors.grey.shade50,
+                    color: product.isOffer ? Colors.orange.shade50.withValues(alpha: 0.3) : Colors.grey.shade50,
                     child: Stack(
                       children: [
                         Center(
@@ -84,9 +84,45 @@ class ProductDetailScreen extends StatelessWidget {
                             fallbackIcon: Icons.shopping_basket_outlined,
                           ),
                         ),
+                        if (product.isOffer && !isOutOfStock)
+                          Positioned(
+                            top: 16,
+                            left: 16,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [Colors.orange.shade700, Colors.deepOrange.shade600],
+                                ),
+                                borderRadius: BorderRadius.circular(8),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.deepOrange.withValues(alpha: 0.35),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text('🔥 ', style: TextStyle(fontSize: 12)),
+                                  Text(
+                                    (product.offerLabel.isNotEmpty ? product.offerLabel : 'OFFER').toUpperCase(),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         if (isOutOfStock)
                           Container(
-                            color: Colors.black.withOpacity(0.5),
+                            color: Colors.black.withValues(alpha: 0.5),
                             child: Center(
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -116,21 +152,78 @@ class ProductDetailScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Category pill
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppTheme.primaryColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            product.category,
-                            style: const TextStyle(
-                              color: AppTheme.primaryColor,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
+                        // Category pill & Offer Badges
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                product.category,
+                                style: const TextStyle(
+                                  color: AppTheme.primaryColor,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
-                          ),
+                            if (product.isOffer) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [Colors.orange.shade700, Colors.deepOrange.shade600],
+                                  ),
+                                  borderRadius: BorderRadius.circular(6),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.deepOrange.withValues(alpha: 0.25),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Text('🔥 ', style: TextStyle(fontSize: 11)),
+                                    Text(
+                                      (product.offerLabel.isNotEmpty ? product.offerLabel : 'OFFER').toUpperCase(),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (product.discountPercentage != null) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green.shade50,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: Colors.green.shade600),
+                                  ),
+                                  child: Text(
+                                    '${product.discountPercentage}% OFF',
+                                    style: TextStyle(
+                                      color: Colors.green.shade800,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ],
                         ),
                         const SizedBox(height: 12),
 
@@ -146,29 +239,65 @@ class ProductDetailScreen extends StatelessWidget {
                         const SizedBox(height: 8),
 
                         // Price
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.baseline,
-                          textBaseline: TextBaseline.alphabetic,
-                          children: [
-                            Text(
-                              '₹${product.price.toStringAsFixed(0)}',
-                              style: const TextStyle(
-                                fontSize: 26,
-                                fontWeight: FontWeight.w900,
-                                color: AppTheme.primaryColor,
+                        if (product.hasDiscount)
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            children: [
+                              Text(
+                                '₹${product.offerPrice!.toStringAsFixed(0)}',
+                                style: TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.deepOrange.shade700,
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              '/ ${product.unit}',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: AppTheme.textSecondary,
-                                fontWeight: FontWeight.w500,
+                              const SizedBox(width: 8),
+                              Text(
+                                '₹${product.price.toStringAsFixed(0)}',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  decoration: TextDecoration.lineThrough,
+                                  decorationColor: Colors.grey.shade500,
+                                  color: Colors.grey.shade500,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
+                              const SizedBox(width: 6),
+                              Text(
+                                '/ ${product.unit}',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: AppTheme.textSecondary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          )
+                        else
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            children: [
+                              Text(
+                                '₹${product.price.toStringAsFixed(0)}',
+                                style: TextStyle(
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.w900,
+                                  color: product.isOffer ? Colors.deepOrange.shade700 : AppTheme.primaryColor,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                '/ ${product.unit}',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: AppTheme.textSecondary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
                         const SizedBox(height: 20),
 
                         const Divider(),
@@ -232,7 +361,7 @@ class ProductDetailScreen extends StatelessWidget {
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.06),
+                  color: Colors.black.withValues(alpha: 0.06),
                   blurRadius: 10,
                   offset: const Offset(0, -4),
                 ),

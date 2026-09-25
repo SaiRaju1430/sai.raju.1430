@@ -10,10 +10,10 @@ import '../../providers/order_provider.dart';
 import '../../providers/fast_food_provider.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_textfield.dart';
-import 'payment_screen.dart'; // To use QRPainter
+import '../../widgets/dynamic_upi_qr_widget.dart';
 
 class MyOrdersScreen extends StatelessWidget {
-  const MyOrdersScreen({Key? key}) : super(key: key);
+  const MyOrdersScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +33,7 @@ class MyOrdersScreen extends StatelessWidget {
           bottom: TabBar(
             indicatorColor: AppTheme.primaryColor,
             labelColor: AppTheme.primaryColor,
-            unselectedLabelColor: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6),
+            unselectedLabelColor: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
             tabs: const [
               Tab(text: 'General Orders'),
               Tab(text: 'Personal Requests'),
@@ -83,7 +83,7 @@ class MyOrdersScreen extends StatelessWidget {
 class EmptyListPlaceholder extends StatelessWidget {
   final String message;
 
-  const EmptyListPlaceholder({Key? key, required this.message}) : super(key: key);
+  const EmptyListPlaceholder({super.key, required this.message});
 
   @override
   Widget build(BuildContext context) {
@@ -95,7 +95,7 @@ class EmptyListPlaceholder extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             message,
-            style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.5)),
+            style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.5)),
           ),
         ],
       ),
@@ -105,7 +105,7 @@ class EmptyListPlaceholder extends StatelessWidget {
 
 class OrderHistoryCard extends StatelessWidget {
   final OrderModel order;
-  const OrderHistoryCard({Key? key, required this.order}) : super(key: key);
+  const OrderHistoryCard({super.key, required this.order});
 
   Color _getStatusColor(String status) {
     switch (status) {
@@ -154,16 +154,16 @@ class OrderHistoryCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       DateFormat('dd MMM yyyy, hh:mm a').format(order.orderDate),
-                      style: TextStyle(fontSize: 11, color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6)),
+                      style: TextStyle(fontSize: 11, color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.6)),
                     ),
                   ],
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.1),
+                    color: statusColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: statusColor.withOpacity(0.3)),
+                    border: Border.all(color: statusColor.withValues(alpha: 0.3)),
                   ),
                   child: Text(
                     displayStatus,
@@ -188,7 +188,7 @@ class OrderHistoryCard extends StatelessWidget {
                       ),
                       Text(
                         '₹${(item.price * item.quantity).toStringAsFixed(0)}',
-                        style: TextStyle(fontSize: 13, color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7)),
+                        style: TextStyle(fontSize: 13, color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7)),
                       ),
                     ],
                   ),
@@ -202,7 +202,7 @@ class OrderHistoryCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Delivery Charge', style: TextStyle(fontSize: 12, color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7))),
+                Text('Delivery Charge', style: TextStyle(fontSize: 12, color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7))),
                 Text('₹${order.deliveryFee.toStringAsFixed(0)}', style: TextStyle(fontSize: 12, color: Theme.of(context).textTheme.bodyLarge?.color)),
               ],
             ),
@@ -221,9 +221,9 @@ class OrderHistoryCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withOpacity(0.06),
+                  color: AppTheme.primaryColor.withValues(alpha: 0.06),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppTheme.primaryColor.withOpacity(0.12)),
+                  border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.12)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -237,7 +237,7 @@ class OrderHistoryCard extends StatelessWidget {
                             children: [
                               Text(
                                 isFinalized ? 'Delivery Verification OTP (Recorded)' : 'Delivery Verification OTP',
-                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7)),
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7)),
                               ),
                               const SizedBox(height: 2),
                               Text(
@@ -292,15 +292,16 @@ class OrderHistoryCard extends StatelessWidget {
 
 class RequestHistoryCard extends StatefulWidget {
   final PersonalRequestModel request;
-  const RequestHistoryCard({Key? key, required this.request}) : super(key: key);
+  const RequestHistoryCard({super.key, required this.request});
 
   @override
   State<RequestHistoryCard> createState() => _RequestHistoryCardState();
 }
 
 class _RequestHistoryCardState extends State<RequestHistoryCard> {
-  final _paymentAccountNameController = TextEditingController(); // NEW
-  final _paymentMobileController = TextEditingController(); // NEW
+  final _paymentIdController = TextEditingController();
+  final _paymentAccountNameController = TextEditingController();
+  final _paymentMobileController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isSubmitting = false;
   bool _shownDeliveredPopup = false;
@@ -382,8 +383,9 @@ class _RequestHistoryCardState extends State<RequestHistoryCard> {
 
   @override
   void dispose() {
-    _paymentAccountNameController.dispose(); // NEW
-    _paymentMobileController.dispose(); // NEW
+    _paymentIdController.dispose();
+    _paymentAccountNameController.dispose();
+    _paymentMobileController.dispose();
     super.dispose();
   }
 
@@ -409,6 +411,17 @@ class _RequestHistoryCardState extends State<RequestHistoryCard> {
   }
 
   Future<void> _handlePaymentSubmit(OrderProvider provider) async {
+    // Requirement 15: Validate that the QR amount exactly matches the final amount stored for that order
+    if (widget.request.totalAmount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Invalid payment amount. Please wait for admin approval.'),
+          backgroundColor: Colors.red.shade600,
+        ),
+      );
+      return;
+    }
+
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isSubmitting = true;
@@ -416,9 +429,9 @@ class _RequestHistoryCardState extends State<RequestHistoryCard> {
 
       bool success = await provider.submitPersonalRequestPayment(
         requestId: widget.request.id,
-        paymentId: '',
-        paymentAccountName: _paymentAccountNameController.text.trim(), // NEW
-        paymentMobileNumber: _paymentMobileController.text.trim(), // NEW
+        paymentId: _paymentIdController.text.trim(),
+        paymentAccountName: _paymentAccountNameController.text.trim(),
+        paymentMobileNumber: _paymentMobileController.text.trim(),
       );
 
       if (mounted) {
@@ -428,7 +441,7 @@ class _RequestHistoryCardState extends State<RequestHistoryCard> {
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Payment Transaction ID submitted successfully!'),
+              content: Text('Payment details submitted for verification!'),
               backgroundColor: Colors.green,
             ),
           );
@@ -465,7 +478,7 @@ class _RequestHistoryCardState extends State<RequestHistoryCard> {
                   width: 70,
                   height: 70,
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withOpacity(0.1),
+                    color: AppTheme.primaryColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(Icons.receipt_long_rounded, color: AppTheme.primaryColor, size: 32),
@@ -490,9 +503,9 @@ class _RequestHistoryCardState extends State<RequestHistoryCard> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: statusColor.withOpacity(0.1),
+                              color: statusColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: statusColor.withOpacity(0.3)),
+                              border: Border.all(color: statusColor.withValues(alpha: 0.3)),
                             ),
                             child: Text(
                               widget.request.status,
@@ -504,7 +517,7 @@ class _RequestHistoryCardState extends State<RequestHistoryCard> {
                       const SizedBox(height: 2),
                       Text(
                         DateFormat('dd MMM yyyy, hh:mm a').format(widget.request.requestDate),
-                        style: TextStyle(fontSize: 10, color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6)),
+                        style: TextStyle(fontSize: 10, color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.6)),
                       ),
                       const SizedBox(height: 6),
                       Text(
@@ -531,9 +544,9 @@ class _RequestHistoryCardState extends State<RequestHistoryCard> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.amber.shade50.withOpacity(0.1),
+                  color: Colors.amber.shade50.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.amber.shade300.withOpacity(0.4)),
+                  border: Border.all(color: Colors.amber.shade300.withValues(alpha: 0.4)),
                 ),
                 child: Row(
                   children: [
@@ -558,9 +571,9 @@ class _RequestHistoryCardState extends State<RequestHistoryCard> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.purple.shade50.withOpacity(0.1),
+                        color: Colors.purple.shade50.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.purple.shade200.withOpacity(0.4)),
+                        border: Border.all(color: Colors.purple.shade200.withValues(alpha: 0.4)),
                       ),
                       child: Column(
                         children: [
@@ -592,47 +605,18 @@ class _RequestHistoryCardState extends State<RequestHistoryCard> {
                     ),
                     const SizedBox(height: 16),
                     
-                    // QR Code Visual
+                    // Dynamic UPI QR Code encoding exact total amount set by admin
                     Center(
-                      child: Column(
-                        children: [
-                          const Text(
-                            'Scan QR to Pay via UPI',
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 8),
-                          Container(
-                            width: 140,
-                            height: 140,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.grey.shade300),
-                            ),
-                            padding: const EdgeInsets.all(8),
-                            child: CustomPaint(
-                              painter: QRPainter(),
-                              child: Center(
-                                child: Container(
-                                  padding: const EdgeInsets.all(4),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: const Icon(Icons.qr_code_scanner_rounded, color: AppTheme.primaryColor, size: 20),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          const Text(
-                            'UPI ID: campuskart@upi',
-                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey),
-                          ),
-                        ],
+                      child: DynamicUpiQrWidget(
+                        amount: widget.request.totalAmount,
+                        transactionNote: 'CampusKart Request #${widget.request.id.replaceAll('req_', '').substring(0, min(5, widget.request.id.replaceAll('req_', '').length)).toUpperCase()}',
+                        qrSize: 140,
+                        showAmountHeader: true,
+                        showScanPrompt: true,
+                        showUpiDetails: true,
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 18),
 
                     // UPI Account Name Textbox
                     CustomTextField(
@@ -667,6 +651,16 @@ class _RequestHistoryCardState extends State<RequestHistoryCard> {
                     ),
                     const SizedBox(height: 12),
 
+                    // UPI Ref / Transaction ID
+                    CustomTextField(
+                      label: 'UPI Ref / Transaction ID (Optional)',
+                      hint: 'e.g. 12-digit UPI reference ID / UTR',
+                      controller: _paymentIdController,
+                      keyboardType: TextInputType.text,
+                      prefixIcon: Icons.receipt_long_rounded,
+                    ),
+                    const SizedBox(height: 16),
+
                     // Submit Button
                     CustomButton(
                       text: 'PAY & SUBMIT',
@@ -681,9 +675,9 @@ class _RequestHistoryCardState extends State<RequestHistoryCard> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.blue.shade50.withOpacity(0.1),
+                  color: Colors.blue.shade50.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.blue.shade300.withOpacity(0.4)),
+                  border: Border.all(color: Colors.blue.shade300.withValues(alpha: 0.4)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -701,7 +695,7 @@ class _RequestHistoryCardState extends State<RequestHistoryCard> {
                     const SizedBox(height: 6),
                     Text(
                       'Admin is currently verifying your transaction. Reference ID: ${widget.request.paymentId}. Once verified, your delivery code will appear here.',
-                      style: TextStyle(fontSize: 11, color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.8), height: 1.4),
+                      style: TextStyle(fontSize: 11, color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.8), height: 1.4),
                     ),
                   ],
                 ),
@@ -711,9 +705,9 @@ class _RequestHistoryCardState extends State<RequestHistoryCard> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.green.shade50.withOpacity(0.1),
+                  color: Colors.green.shade50.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.green.shade300.withOpacity(0.4)),
+                  border: Border.all(color: Colors.green.shade300.withValues(alpha: 0.4)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -749,7 +743,7 @@ class _RequestHistoryCardState extends State<RequestHistoryCard> {
                       widget.request.status == 'Out For Delivery'
                           ? 'Your request is out for delivery! Share this code with the delivery person. Delivering to ${widget.request.blockName}, Room ${widget.request.roomNumber}.'
                           : 'Payment verified successfully. Share this code with the delivery person. Delivering to ${widget.request.blockName}, Room ${widget.request.roomNumber}.',
-                      style: TextStyle(fontSize: 11, color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.8), height: 1.4),
+                      style: TextStyle(fontSize: 11, color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.8), height: 1.4),
                     ),
                   ],
                 ),
@@ -759,9 +753,9 @@ class _RequestHistoryCardState extends State<RequestHistoryCard> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.green.shade50.withOpacity(0.1),
+                  color: Colors.green.shade50.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.green.shade300.withOpacity(0.4)),
+                  border: Border.all(color: Colors.green.shade300.withValues(alpha: 0.4)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -806,9 +800,9 @@ class _RequestHistoryCardState extends State<RequestHistoryCard> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.red.shade50.withOpacity(0.1),
+                  color: Colors.red.shade50.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.red.shade300.withOpacity(0.4)),
+                  border: Border.all(color: Colors.red.shade300.withValues(alpha: 0.4)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -857,7 +851,7 @@ class _RequestHistoryCardState extends State<RequestHistoryCard> {
 }
 
 class FastFoodOrdersList extends StatelessWidget {
-  const FastFoodOrdersList({Key? key}) : super(key: key);
+  const FastFoodOrdersList({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -881,7 +875,7 @@ class FastFoodOrdersList extends StatelessWidget {
 
 class FastFoodOrderHistoryCard extends StatelessWidget {
   final FastFoodOrderModel order;
-  const FastFoodOrderHistoryCard({Key? key, required this.order}) : super(key: key);
+  const FastFoodOrderHistoryCard({super.key, required this.order});
 
   Color _getStatusColor(String status) {
     switch (status) {
@@ -938,9 +932,9 @@ class FastFoodOrderHistoryCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.1),
+                    color: statusColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: statusColor.withOpacity(0.3)),
+                    border: Border.all(color: statusColor.withValues(alpha: 0.3)),
                   ),
                   child: Text(
                     order.status,
@@ -1022,13 +1016,13 @@ class FastFoodOrderHistoryCard extends StatelessWidget {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: (order.status == 'Delivered' || order.status == 'Rejected')
-                      ? (order.status == 'Delivered' ? Colors.green.shade50.withOpacity(0.15) : Colors.red.shade50.withOpacity(0.15))
-                      : AppTheme.primaryColor.withOpacity(0.05),
+                      ? (order.status == 'Delivered' ? Colors.green.shade50.withValues(alpha: 0.15) : Colors.red.shade50.withValues(alpha: 0.15))
+                      : AppTheme.primaryColor.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: (order.status == 'Delivered' || order.status == 'Rejected')
                         ? (order.status == 'Delivered' ? Colors.green.shade300 : Colors.red.shade300)
-                        : AppTheme.primaryColor.withOpacity(0.2),
+                        : AppTheme.primaryColor.withValues(alpha: 0.2),
                   ),
                 ),
                 child: Column(

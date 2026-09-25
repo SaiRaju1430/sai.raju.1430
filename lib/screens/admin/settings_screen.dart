@@ -4,7 +4,7 @@ import '../../core/theme/app_theme.dart';
 import '../../providers/admin_provider.dart';
 
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({Key? key}) : super(key: key);
+  const SettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +52,7 @@ class SettingsScreen extends StatelessWidget {
                         ),
                         Switch(
                           value: admin.isOwnerAvailable,
-                          activeColor: AppTheme.primaryColor,
+                          activeThumbColor: AppTheme.primaryColor,
                           onChanged: (val) {
                             admin.toggleAvailability(val);
                           },
@@ -92,7 +92,7 @@ class SettingsScreen extends StatelessWidget {
                         ),
                         Switch(
                           value: admin.sendNotificationOnNewItem,
-                          activeColor: AppTheme.primaryColor,
+                          activeThumbColor: AppTheme.primaryColor,
                           onChanged: (val) {
                             admin.toggleSendNotificationOnNewItem(val);
                           },

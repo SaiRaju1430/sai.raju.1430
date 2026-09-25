@@ -9,13 +9,13 @@ class DashboardCard extends StatelessWidget {
   final VoidCallback? onTap;
 
   const DashboardCard({
-    Key? key,
+    super.key,
     required this.title,
     required this.value,
     required this.icon,
     required this.color,
     this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +23,7 @@ class DashboardCard extends StatelessWidget {
       onTap: onTap,
       child: Card(
         elevation: 3,
-        shadowColor: color.withOpacity(0.12),
+        shadowColor: color.withValues(alpha: 0.12),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: Container(
           decoration: BoxDecoration(
@@ -31,12 +31,12 @@ class DashboardCard extends StatelessWidget {
             gradient: LinearGradient(
               colors: [
                 Colors.white,
-                color.withOpacity(0.04),
+                color.withValues(alpha: 0.04),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            border: Border.all(color: color.withOpacity(0.15), width: 1),
+            border: Border.all(color: color.withValues(alpha: 0.15), width: 1),
           ),
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -49,7 +49,7 @@ class DashboardCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: color.withOpacity(0.12),
+                      color: color.withValues(alpha: 0.12),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(icon, color: color, size: 24),
